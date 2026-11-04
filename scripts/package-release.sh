@@ -15,10 +15,10 @@ project_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 app_name="牛马上班"
 info_plist="$project_root/Resources/Info.plist"
 version="$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$info_plist")"
-app_dir="$project_root/build/$app_name.app"
+app_dir="$project_root/build/${app_name}.app"
 dist_dir="$project_root/dist"
 stage_dir="$dist_dir/stage"
-zip_path="$dist_dir/$app_name-$version-macOS-arm64.zip"
+zip_path="$dist_dir/${app_name}-${version}-macOS-universal.zip"
 
 # 1. 构建并做基础校验（复用现有构建脚本，保证包内哈希与源码一致）。
 bash "$project_root/scripts/build-app.sh"
@@ -43,28 +43,40 @@ fi
 # 2. 组装分发目录：应用 + 安装说明。
 rm -rf "$stage_dir"
 install -d "$stage_dir"
-/usr/bin/ditto "$app_dir" "$stage_dir/$app_name.app"
+/usr/bin/ditto "$app_dir" "$stage_dir/${app_name}.app"
 cat > "$stage_dir/安装说明.txt" <<EOF
-$app_name $version
+${app_name} ${version}
 ========================================
 
 运行要求
-  · Apple Silicon 机型（M1 / M2 / M3 / M4 / M5）
-  · macOS 27.2 或更高版本
+  · macOS 13 Ventura 或更高版本（14 / 15 / 26 / 27 均可）
+  · Apple Silicon（M 系列）与 Intel 机型通用，无需 Rosetta 转译
 
 安装
-  1. 解压后，把「$app_name.app」拖进「应用程序」文件夹。
-  2. 首次打开（二选一）：
-     a) 打开「系统设置 → 隐私与安全性」，向下滚动到底部，
-        在安全提示处点「仍要打开」，再确认一次。
-     b) 打开「终端」，执行下面一行，然后正常双击打开：
-        xattr -dr com.apple.quarantine "/Applications/$app_name.app"
+  1. 解压后，把「${app_name}.app」拖进「应用程序」文件夹。
+  2. 双击打开。如果弹出「未打开“${app_name}”／Apple 无法验证……是否包含
+     可能危害 Mac 安全或泄漏隐私的恶意软件」，这不是病毒报警，是系统
+     对未公证应用的例行拦截。按下述任一种方式放行：
+
+     方式一（推荐，有图形界面）
+       a. 点「完成」。注意：不要点「移到废纸篓」，那会把应用删掉。
+       b. 打开「系统设置」→「隐私与安全性」，向下滚动到「安全性」区域，
+          这里会出现一条「已阻止“${app_name}”……」的提示，
+          点它右边的「仍要打开」，输入开机密码确认。
+       c. 回到「应用程序」再双击一次，弹窗里点「打开」。
+       提示：这条「仍要打开」按钮只在拦截发生后的一小时内出现。
+       如果已经消失，重新双击一次应用让它再被拦截，按钮就会回来。
+
+     方式二（最快，跳过图形界面）
+       打开「终端」，粘贴执行下面一行，然后正常双击打开：
+        xattr -dr com.apple.quarantine "/Applications/${app_name}.app"
+
   3. 启动后会自动弹出设置窗口，填入自己的月薪与上下班时间即可。
 
 $([ "$mode" = "adhoc" ] && printf '%s\n' "为什么要多这一步
-  这个版本是个人构建、未经 Apple 公证的独立应用，系统无法验证发布者身份，
+  这个版本是个人构建、未经 Apple 公证的独立应用，Apple 无法验证发布者身份，
   所以 Gatekeeper 默认拦截。上面两步只是解除「来源未知」的隔离标记，
-  不改变应用本身的任何行为。")
+  不改变应用本身的任何行为，也不会修改系统安全设置。")
 
 使用与卸载
   · 菜单栏图标即入口；快捷键 ⌘I 查看收入、⌘, 打开设置、⌘Q 退出。

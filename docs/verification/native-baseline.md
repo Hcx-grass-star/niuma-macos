@@ -6,7 +6,7 @@
 
 - 本机：Apple M5、arm64、24 GiB 内存、macOS 27.2。
 - 工具：本机 Swift 6.4.2、Command Line Tools 中的 macOS SDK；无第三方包依赖。
-- 应用：`build/牛马上班.app`，仅 arm64，最低系统基线 27.2。
+- 应用：`build/牛马上班.app`，通用二进制（arm64 + x86_64），最低系统基线 13.0（2026-11-04 由 27.2 下调，见「兼容性调整」）。
 - 身份：`com.hcxgrassstar.niuma`；配置为 `~/Library/Application Support/com.hcxgrassstar.niuma/settings.json`。
 - 构建命令：`bash scripts/build-app.sh`；`codesign --verify --strict` 已通过。
 - 签名为本机临时签名，不是 Developer ID 分发签名，也未进行公证。
@@ -88,6 +88,31 @@ swift run --disable-automatic-resolution NiumaIntegrationTests
 初始版本关闭设置后的 60 秒采样曾达到 52.25 MiB，超过后台目标。随后移除了额外彩色字体资源，并释放已关闭设置窗口，进一步改为按需创建和释放收入视图。[初始诊断记录](resource-initial-idle-60s.json)未附最终构建指纹，不作为最终构建达标证据；也不将不同使用历史的两次采样差异全部归因于单项修改。
 
 一次尝试的展开面板采样因失去焦点后自动收起，未保持模式一致，不计为展开模式通过。正式展开面板、设置页和菜单栏金额的完整窗口仍须单独验证。
+
+## 兼容性调整（2026-11-04）
+
+按用户「版本要主流版本都适配」的要求，支持基线由 macOS 27.2 / 仅 arm64 调整为 macOS 13.0 起 / 通用二进制。
+
+改动：
+
+- `Package.swift` 的 `platforms` 与 `Info.plist` 的 `LSMinimumSystemVersion` 同步改为 13.0，两者必须一致。
+- 构建脚本改用 `swift build --arch arm64 --arch x86_64`，产物为 fat 二进制，Intel 机型原生运行，不依赖 Rosetta。
+- 三处高于 13.0 的 API 改为回退调用：无参 `NSApp.activate()`、`NSRunningApplication.activate()` 需 macOS 14，旧系统走 `ignoringOtherApps`；`NSViewController.loadViewIfNeeded()` 需 macOS 14，改为访问 `view` 触发按需加载。
+- 版本下限的实际约束是 macOS 13 起提供的 `SMAppService` 登录启动接口。
+
+已验证：
+
+- release 构建在 `-target arm64-apple-macos13.0` 下通过，无可用性编译错误。
+- 8 组集成验证全部通过（计算与存储逻辑未受改动影响）。
+- arm64 切片在本机 macOS 27.2 启动并保留菜单栏，分发包解压后可运行。
+- x86_64 切片在本机经 Rosetta 启动未崩溃，且二进制不含对缺失兼容库的硬依赖。
+
+未验证，不得视为通过：
+
+- macOS 13、14、15、26 的实机运行；本机只有 macOS 27.2。
+- 真实 Intel 硬件上的运行；Rosetta 只验证指令转译路径，不等价于 Intel Mac 实机。
+- 旧系统上 `SMAppService` 注册、`requiresApproval` 提示与重新登录的实际表现。
+- 旧系统上的界面布局（`launch` 表单滚动、弹出面板尺寸）与深色外观。
 
 ## 尚未完成的正式验收
 

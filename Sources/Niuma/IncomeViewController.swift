@@ -81,7 +81,8 @@ final class IncomeViewController: NSViewController {
 
     /// 将领域快照投影为唯一的收入展示，错误时不展示旧金额。
     func render(_ snapshot: IncomeSnapshot, settings: WorkSettings?, error: String? = nil) {
-        loadViewIfNeeded()
+        // 读取 view 会按需触发 loadView；loadViewIfNeeded() 需 macOS 14，故不直接调用。
+        _ = view
         let hidden = settings?.hideAmounts == true
         amount.stringValue = hidden ? "••••" : Self.money(snapshot.amount)
         amount.font = .monospacedDigitSystemFont(ofSize: amount.stringValue.count > 13 ? 30 : 48, weight: .medium)

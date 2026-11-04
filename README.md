@@ -1,13 +1,13 @@
 # 牛马上班（macOS）
 
-以当前收入提供上班鼓励的轻量菜单栏工具，首要适配本机 Apple M5。
+以当前收入提供上班鼓励的轻量菜单栏工具，适配 Apple Silicon 与 Intel 机型，最低 macOS 13。
 
 ## 原生开发版
 
 当前已有 Swift + AppKit 原生工程，无第三方运行依赖。已在本机 M5、macOS 27.2、Swift 6.4.2 命令行工具链上构建，尚未完成正式发布验收。
 
 ```bash
-# 构建本机 arm64 应用包，并验证本地临时签名。
+# 构建通用（arm64 + x86_64）应用包，并验证本地临时签名。
 bash scripts/build-app.sh
 
 # 打开应用；首次使用需要填写自己的工资，程序不会生成示例工资。
@@ -22,7 +22,7 @@ swift run --disable-automatic-resolution NiumaIntegrationTests
 ## 打包分享
 
 ```bash
-# 生成 dist/牛马上班-<版本>-macOS-arm64.zip，内含 .app 与「安装说明.txt」。
+# 生成 dist/牛马上班-<版本>-macOS-universal.zip，内含 .app 与「安装说明.txt」。
 bash scripts/package-release.sh
 ```
 
@@ -35,7 +35,9 @@ xcrun notarytool store-credentials niuma-notary --apple-id <账号> --team-id <�
 DEVELOPER_ID_APP="Developer ID Application: 名字 (团队ID)" NOTARY_PROFILE=niuma-notary bash scripts/package-release.sh
 ```
 
-分发包当前限制为 Apple Silicon 且 macOS 27.2 以上（见 `Package.swift` 的 `platforms` 与 `Info.plist` 的 `LSMinimumSystemVersion`），发给使用旧系统或 Intel 机型的用户会直接提示系统版本不足。
+兼容范围：最低 macOS 13 Ventura，最高跟随构建 SDK；打包为 arm64 + x86_64 通用二进制，Apple Silicon 与 Intel 均为原生运行。版本下限由 `Package.swift` 的 `platforms` 与 `Info.plist` 的 `LSMinimumSystemVersion` 共同决定，两者须保持一致。低于 macOS 13 的系统会提示版本不足。
+
+macOS 13/14 上使用 `if #available` 回退：无参 `NSApp.activate()` 与 `NSApplication.activate()` 自 macOS 14 起提供，旧系统改走 `ignoringOtherApps` 等价调用；`NSViewController.loadViewIfNeeded()` 需 macOS 14，改为访问 `view` 触发按需加载。登录启动依赖 macOS 13 起的 `SMAppService`，构成版本下限的技术原因。
 
 首次启动会打开设置；保存后返回当前收入面板。后续启动默认只保留菜单栏叶子图标，点击展开。隐藏金额会同时隐藏设置页工资。原生快捷键：`⌘I` 查看收入、`⌘,` 打开设置、`⌘Q` 退出（应用处于激活状态时）。
 
