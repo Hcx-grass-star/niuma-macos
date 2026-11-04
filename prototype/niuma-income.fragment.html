@@ -1,0 +1,241 @@
+<div id="niuma-income" aria-label="牛马上班鼓励工具交互原型">
+  <div class="nm-preview-tools">
+    <span>状态预览</span>
+    <select id="nm-scenario" aria-label="预览工作状态" class="cursor-interaction">
+      <option value="working">上班中</option><option value="break">午休中</option><option value="before">上班前</option><option value="after">已下班</option><option value="off">休息日</option>
+    </select>
+    <span class="nm-demo">示例 · 11 月 4 日</span>
+  </div>
+  <div class="nm-stage viz-dotted-background">
+    <div class="nm-window" aria-label="macOS 菜单栏工具">
+      <div class="nm-menubar">
+        <span class="nm-mac-label">牛马上班</span>
+        <div class="nm-menu-right"><button class="nm-menu-icon cursor-interaction" type="button" id="nm-menu-toggle" aria-label="收起收入面板" aria-expanded="true"><i data-lucide="sprout" aria-hidden="true"></i></button><span id="nm-clock">14:00</span></div>
+      </div>
+      <section class="nm-popover" id="nm-popover" aria-label="收入面板">
+        <div id="nm-home">
+          <header class="nm-header"><span class="nm-wordmark"><i data-lucide="sprout" aria-hidden="true"></i> 牛马上班</span><button class="nm-icon-button cursor-interaction" id="nm-hide" type="button" aria-label="隐藏金额" aria-pressed="false"><i data-lucide="eye" aria-hidden="true"></i></button></header>
+          <div class="nm-income-area">
+            <div class="nm-status" id="nm-status"><span class="nm-dot"></span><span id="nm-status-text">上班中</span></div>
+            <div class="nm-income-label">当前收入</div>
+            <div class="nm-money" id="nm-money" aria-label="当前收入 500 元"><span class="nm-currency">¥</span><span id="nm-amount">500.00</span></div>
+            <div class="nm-estimate">本班预估</div>
+          </div>
+          <div class="nm-encouragement" id="nm-encouragement"><span class="nm-quote-line"></span><p id="nm-quote">每一秒，都在为生活攒一点底气。</p></div>
+          <footer class="nm-footer"><span id="nm-footer-state"><span class="nm-small-dot"></span> 自动计算中</span><button class="nm-text-button cursor-interaction" id="nm-open-settings" type="button"><i data-lucide="settings-2" aria-hidden="true"></i> 设置</button></footer>
+        </div>
+        <form id="nm-settings" hidden novalidate>
+          <header class="nm-settings-header"><button class="nm-icon-button cursor-interaction" id="nm-back" type="button" aria-label="返回收入面板"><i data-lucide="chevron-left" aria-hidden="true"></i></button><span>工资与作息</span><span class="nm-local">仅本机</span></header>
+          <div class="nm-form-body">
+            <fieldset class="nm-fieldset"><legend>工资</legend>
+              <div class="nm-segment" role="group" aria-label="工资模式"><button type="button" data-mode="monthly" aria-pressed="true" class="cursor-interaction">月薪</button><button type="button" data-mode="daily" aria-pressed="false" class="cursor-interaction">日薪</button></div>
+              <label class="nm-salary-label" for="nm-salary" id="nm-salary-label">每月工资（元）</label><div class="nm-salary-input"><span aria-hidden="true">¥</span><input id="nm-salary" type="number" min="0.01" step="0.01" value="21000" inputmode="decimal" aria-describedby="nm-error"></div>
+            </fieldset>
+            <fieldset class="nm-fieldset"><legend>上班周期</legend><div class="nm-week" role="group" aria-label="每周工作日"><button type="button" data-day="1" aria-pressed="true" class="cursor-interaction">一</button><button type="button" data-day="2" aria-pressed="true" class="cursor-interaction">二</button><button type="button" data-day="3" aria-pressed="true" class="cursor-interaction">三</button><button type="button" data-day="4" aria-pressed="true" class="cursor-interaction">四</button><button type="button" data-day="5" aria-pressed="true" class="cursor-interaction">五</button><button type="button" data-day="6" aria-pressed="false" class="cursor-interaction">六</button><button type="button" data-day="0" aria-pressed="false" class="cursor-interaction">日</button></div></fieldset>
+            <fieldset class="nm-fieldset"><legend>上班时间</legend><div class="nm-time-row"><label>上班<input id="nm-start" type="time" value="09:00" required></label><span class="nm-time-separator">—</span><label>下班<input id="nm-end" type="time" value="18:00" required></label></div><p class="nm-helper">下班早于上班时，视为次日下班。</p></fieldset>
+            <fieldset class="nm-fieldset"><legend class="nm-rest-title">休息时间</legend><label class="nm-check"><input id="nm-rest-enabled" type="checkbox" checked> 休息期间不计薪</label><div class="nm-time-row" id="nm-rest-fields"><label>开始<input id="nm-rest-start" type="time" value="12:00"></label><span class="nm-time-separator">—</span><label>结束<input id="nm-rest-end" type="time" value="13:00"></label></div></fieldset>
+            <div class="nm-monthly-options" id="nm-monthly-options"><label for="nm-divisor-mode">月薪折算</label><select id="nm-divisor-mode"><option value="schedule">本月排班天数</option><option value="fixed">指定折算天数</option></select><label id="nm-fixed-wrap" hidden>折算天数<input id="nm-fixed-days" type="number" min="0.01" step="0.01" value="22"></label><p class="nm-helper" id="nm-divisor-note">示例月份按所选周期计算，不自动识别节假日。</p></div>
+            <label class="nm-check nm-cheer-check"><input id="nm-cheer" type="checkbox" checked> 显示鼓励文案</label>
+            <p id="nm-error" class="nm-error" role="alert" hidden></p>
+            <p class="nm-helper nm-save-note">保存后重新估算本班收入。原型使用示例日期和演示时钟。</p>
+            <button class="nm-save cursor-interaction" type="submit">保存并返回</button>
+          </div>
+        </form>
+      </section>
+      <div id="nm-collapsed" class="nm-collapsed" hidden>点击菜单栏的小芽，查看当前收入。</div>
+    </div>
+  </div>
+</div>
+<style>
+  #niuma-income { --nm-bg:light-dark(#ffffff,#232624); --nm-ink:light-dark(#202b25,#edf3ef); --nm-sub:light-dark(#67746c,#a5b2a9); --nm-line:light-dark(#e9eeeb,#3b423d); --nm-soft:light-dark(#f4f7f4,#2d342e); --nm-green:light-dark(#28664b,#9bd2b3); --nm-tint:light-dark(#e9f3eb,#2d4134); --nm-menu:light-dark(#f4f5f3,#323833); --nm-shadow:light-dark(#1d39251a,#00000055); --nm-error:light-dark(#b33535,#ffb0a7); font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC",sans-serif; color:var(--nm-ink); font-size:13px; line-height:1.5; color-scheme:light dark; }
+  #niuma-income * { box-sizing:border-box; }
+  #niuma-income [hidden] { display:none !important; }
+  #niuma-income button,#niuma-income input,#niuma-income select { font:inherit; }
+  #niuma-income button { color:var(--nm-ink); }
+  #niuma-income svg { width:17px; height:17px; flex-shrink:0; }
+  #niuma-income .nm-preview-tools { display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:6px 12px 16px; color:var(--nm-sub); font-size:12px; }
+  #niuma-income .nm-preview-tools select { border:1px solid var(--nm-line); border-radius:8px; padding:5px 25px 5px 9px; background:var(--nm-bg); color:var(--nm-ink); }
+  #niuma-income .nm-demo { margin-left:auto; }
+  #niuma-income .nm-stage { padding:30px 18px 42px; border-radius:16px; }
+  #niuma-income .nm-window { width:360px; max-width:100%; margin:auto; }
+  #niuma-income .nm-menubar { display:flex; justify-content:space-between; align-items:center; padding:5px 15px; background:var(--nm-menu); border:1px solid var(--nm-line); border-radius:10px; min-height:36px; font-size:12px; }
+  #niuma-income .nm-mac-label { font-weight:500; }
+  #niuma-income .nm-menu-right { display:flex; align-items:center; gap:16px; font-variant-numeric:tabular-nums; }
+  #niuma-income .nm-menu-icon { display:grid; place-items:center; border:0; padding:3px 8px; border-radius:5px; background:var(--nm-bg); color:var(--nm-green); }
+  #niuma-income .nm-popover { position:relative; margin-top:14px; border:1px solid var(--nm-line); border-radius:19px; background:var(--nm-bg); box-shadow:0 12px 36px var(--nm-shadow); }
+  #niuma-income .nm-popover::before { content:""; position:absolute; right:62px; top:-7px; width:12px; height:12px; background:var(--nm-bg); border-top:1px solid var(--nm-line); border-left:1px solid var(--nm-line); transform:rotate(45deg); }
+  #niuma-income .nm-header { display:flex; align-items:center; justify-content:space-between; padding:17px 19px 0 22px; }
+  #niuma-income .nm-wordmark { display:flex; align-items:center; gap:7px; font-size:13px; font-weight:500; }
+  #niuma-income .nm-wordmark svg { color:var(--nm-green); }
+  #niuma-income .nm-icon-button { display:grid; place-items:center; width:32px; height:32px; border:0; border-radius:8px; background:transparent; color:var(--nm-sub); }
+  #niuma-income .nm-icon-button:hover,#niuma-income .nm-text-button:hover { background:var(--nm-soft); }
+  #niuma-income .nm-income-area { text-align:center; padding:25px 16px 32px; }
+  #niuma-income .nm-status { display:inline-flex; align-items:center; gap:7px; padding:4px 10px; border-radius:20px; background:var(--nm-tint); color:var(--nm-green); font-size:11px; }
+  #niuma-income .nm-dot { width:5px; height:5px; background:currentColor; border-radius:50%; }
+  #niuma-income .nm-income-label { margin-top:24px; color:var(--nm-sub); font-size:13px; }
+  #niuma-income .nm-money { display:flex; justify-content:center; align-items:baseline; gap:6px; margin-top:4px; font-size:54px; line-height:1.35; font-weight:500; letter-spacing:-2px; font-variant-numeric:tabular-nums; }
+  #niuma-income .nm-currency { font-size:25px; letter-spacing:0; }
+  #niuma-income .nm-estimate { color:var(--nm-sub); font-size:11px; margin-top:6px; }
+  #niuma-income .nm-encouragement { display:flex; align-items:center; justify-content:center; gap:9px; margin:0 22px 28px; color:var(--nm-sub); }
+  #niuma-income .nm-quote-line { width:3px; height:14px; border-radius:2px; background:var(--nm-green); opacity:.45; flex-shrink:0; }
+  #niuma-income .nm-encouragement p { margin:0; font-size:12px; }
+  #niuma-income .nm-footer { display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--nm-line); padding:10px 15px 10px 22px; color:var(--nm-sub); font-size:11px; }
+  #niuma-income #nm-footer-state { display:flex; align-items:center; gap:6px; }
+  #niuma-income .nm-small-dot { width:4px; height:4px; border-radius:50%; background:var(--nm-sub); }
+  #niuma-income .nm-text-button { display:flex; align-items:center; gap:6px; padding:7px 8px; border:0; background:transparent; border-radius:7px; color:var(--nm-sub); font-size:12px; }
+  #niuma-income .nm-text-button svg { width:14px; height:14px; }
+  #niuma-income .nm-settings-header { display:flex; align-items:center; gap:6px; padding:14px 14px 12px; border-bottom:1px solid var(--nm-line); font-weight:500; }
+  #niuma-income .nm-local { margin-left:auto; padding-right:8px; font-size:11px; font-weight:400; color:var(--nm-sub); }
+  #niuma-income .nm-form-body { padding:18px 22px 22px; }
+  #niuma-income .nm-fieldset { border:0; padding:0; margin:0 0 19px; min-width:0; }
+  #niuma-income legend { padding:0; margin-bottom:9px; font-weight:500; font-size:12px; }
+  #niuma-income .nm-segment { display:flex; padding:3px; background:var(--nm-soft); border-radius:8px; margin-bottom:13px; }
+  #niuma-income .nm-segment button { flex:1; border:0; background:transparent; padding:5px; border-radius:6px; color:var(--nm-sub); }
+  #niuma-income .nm-segment button[aria-pressed="true"] { color:var(--nm-ink); background:var(--nm-bg); box-shadow:0 1px 4px var(--nm-shadow); }
+  #niuma-income .nm-salary-label { color:var(--nm-sub); font-size:11px; }
+  #niuma-income .nm-salary-input { display:flex; align-items:center; gap:9px; border-bottom:1px solid var(--nm-line); padding:4px 0 7px; }
+  #niuma-income .nm-salary-input span { color:var(--nm-sub); font-size:20px; }
+  #niuma-income .nm-salary-input input { width:100%; min-width:0; padding:2px 0; border:0; background:transparent; color:var(--nm-ink); font-size:26px; font-weight:500; }
+  #niuma-income .nm-week { display:flex; gap:5px; }
+  #niuma-income .nm-week button { flex:1; min-width:0; height:32px; padding:0; border:1px solid var(--nm-line); background:var(--nm-bg); border-radius:8px; color:var(--nm-sub); font-size:12px; }
+  #niuma-income .nm-week button[aria-pressed="true"] { background:var(--nm-tint); color:var(--nm-green); border-color:transparent; }
+  #niuma-income .nm-time-row { display:flex; gap:9px; align-items:end; margin-top:9px; }
+  #niuma-income .nm-time-row label { display:flex; flex:1; min-width:0; flex-direction:column; gap:5px; color:var(--nm-sub); font-size:11px; }
+  #niuma-income .nm-time-row input { width:100%; min-width:0; padding:7px; border:1px solid var(--nm-line); border-radius:7px; background:var(--nm-bg); color:var(--nm-ink); font-size:13px; }
+  #niuma-income .nm-time-separator { padding-bottom:8px; color:var(--nm-sub); }
+  #niuma-income .nm-helper { margin:7px 0 0; color:var(--nm-sub); font-size:11px; line-height:1.6; }
+  #niuma-income .nm-check { display:flex; align-items:center; gap:7px; font-size:12px; }
+  #niuma-income input[type="checkbox"] { accent-color:var(--nm-green); margin:0; }
+  #niuma-income .nm-monthly-options { display:flex; flex-direction:column; gap:7px; margin-bottom:17px; font-size:12px; }
+  #niuma-income .nm-monthly-options select,#niuma-income #nm-fixed-days { padding:8px; border:1px solid var(--nm-line); border-radius:7px; background:var(--nm-bg); color:var(--nm-ink); width:100%; }
+  #niuma-income #nm-fixed-wrap { display:flex; align-items:center; gap:8px; }
+  #niuma-income #nm-fixed-days { flex:1; min-width:0; }
+  #niuma-income .nm-cheer-check { padding-top:12px; border-top:1px solid var(--nm-line); }
+  #niuma-income .nm-save-note { margin-top:16px; }
+  #niuma-income .nm-save { border:0; border-radius:9px; padding:10px; margin-top:13px; width:100%; background:var(--nm-green); color:var(--nm-bg); font-weight:500; }
+  #niuma-income .nm-error { color:var(--nm-error); font-size:12px; margin:12px 0 0; }
+  #niuma-income .nm-collapsed { padding:70px 20px; text-align:center; color:var(--nm-sub); font-size:12px; }
+  @media(max-width:380px) { #niuma-income .nm-stage { padding:22px 8px 30px; } #niuma-income .nm-demo { margin-left:0; } #niuma-income .nm-money { font-size:46px; } #niuma-income .nm-form-body { padding:16px; } }
+  @media(pointer:coarse) { #niuma-income button { min-height:44px; } #niuma-income input,#niuma-income select { min-height:44px; font-size:16px !important; } #niuma-income .nm-week { gap:3px; } }
+</style>
+<script>
+(() => {
+  const root = document.getElementById('niuma-income');
+  /** 在原型根节点内查找控件，避免影响同一会话的其他内容。 */
+  const el = (id) => root.querySelector('#nm-' + id);
+  /** 原型运行状态；工资仅保存在当前页面内存，不传入宿主会话状态。 */
+  const state = {
+    mode:'monthly', // 当前生效的工资输入口径。
+    salary:21000, // 演示工资金额，单位为元。
+    days:[1,2,3,4,5], // 排班使用的星期编号，周日为零。
+    start:'09:00', end:'18:00', // 每日班次的本地开始与结束时间。
+    rest:true, restStart:'12:00', restEnd:'13:00', // 单个不计薪休息区间。
+    divisor:'schedule', fixed:22, // 月薪折算依据及指定折算天数。
+    cheer:true, hidden:false, view:'home', scenario:'working', // 展示偏好与当前预览场景。
+    baseMinutes:840, anchor:Date.now(), // 演示时钟起点及真实时间基点。
+    draftMode:'monthly' // 设置草稿使用的工资模式，保存前不影响当前收入。
+  };
+  /** 将时刻字符串转换为从零点开始的分钟数；空值返回非数。 */
+  function minutes(value) { if(!/^\d{2}:\d{2}$/.test(value)) return NaN; const p=value.split(':').map(Number); return p[0]*60+p[1]; }
+  /** 按班次起点展开跨午夜时间，返回有效班次及休息的相对区间。 */
+  function intervals(c) {
+    const start=minutes(c.start); let end=minutes(c.end); if(end<start) end+=1440;
+    let a=minutes(c.restStart), b=minutes(c.restEnd); if(a<start) a+=1440; if(b<a) b+=1440;
+    return {start,end,a,b,total:end-start-(c.rest?b-a:0)};
+  }
+  /** 统计给定月份中符合星期排班的日期数量。 */
+  function workdays(year,month,days) { let count=0; const last=new Date(year,month+1,0).getDate(); for(let d=1;d<=last;d++) if(days.includes(new Date(year,month,d).getDay())) count++; return count; }
+  /** 只保存非敏感的预览偏好，不把工资或作息交给会话状态。 */
+  function persist() {
+    if(window.openai?.setWidgetState) window.openai.setWidgetState({modelContent:{display:'仅当前收入'},privateContent:{hidden:state.hidden,view:state.view,scenario:state.scenario}}).catch(()=>{});
+  }
+  /** 切换演示时间；休息日采用同一周周六，其他场景采用周三。 */
+  function scenario(value,save=true) {
+    state.scenario=value; state.baseMinutes={working:840,break:750,before:480,after:1110,off:840}[value]??840; state.anchor=Date.now();
+    el('scenario').value=value; root.querySelector('.nm-demo').textContent='示例 · 11 月 '+(value==='off'?'7':'4')+' 日'; render(); if(save) persist();
+  }
+  /** 根据当前排班及演示时刻计算收入；跨夜班使用开始日期的月份折算。 */
+  function compute() {
+    const day=state.scenario==='off'?7:4;
+    const t=state.baseMinutes+(Date.now()-state.anchor)/60000;
+    const now=new Date(2026,10,day,0,0,0); now.setMilliseconds(t*60000);
+    const r=intervals(state); let active=null;
+    for(const offset of [-1,0]) {
+      const date=new Date(now.getFullYear(),now.getMonth(),now.getDate()+offset);
+      const start=new Date(date); start.setMinutes(r.start); const end=new Date(date); end.setMinutes(r.end);
+      if(state.days.includes(date.getDay())&&now>=start&&now<=end) active={date,start,end};
+    }
+    let phase,elapsed=0,date=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+    if(active) {
+      date=active.date; const passed=(now-active.start)/60000;
+      const restElapsed=state.rest?Math.max(0,Math.min(passed-(r.a-r.start),r.b-r.a)):0;
+      elapsed=Math.max(0,Math.min(r.total,passed-restElapsed));
+      phase=state.rest&&passed>=r.a-r.start&&passed<r.b-r.start?'break':'working'; if(now>=active.end) phase='after';
+    } else if(!state.days.includes(now.getDay())) phase='off';
+    else if(t<r.start) phase='before'; else if(t>=r.end) { phase='after'; elapsed=r.total; } else phase='before';
+    const n=state.divisor==='fixed'?state.fixed:workdays(date.getFullYear(),date.getMonth(),state.days);
+    const daily=state.mode==='daily'?state.salary:state.salary/n;
+    return {phase,amount:daily*elapsed/r.total,clock:now.toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit',hour12:false})};
+  }
+  /** 只渲染当前收入及文字状态，不公开时薪、目标收入、进度和倒计时。 */
+  function render() {
+    const c=compute(), phases={working:['上班中','自动计算中','每一秒，都在为生活攒一点底气。'],break:['休息中','休息期间暂停计薪','休息一下，生活也需要留白。'],before:['尚未上班','等待上班时间','慢慢来，今天也会有收获。'],after:['本班已结束','本班计算完成','今天的努力，已经攒起来了。'],off:['休息日','今天好好休息','好好生活，也是一件正经事。']};
+    const p=phases[c.phase]; el('clock').textContent=c.clock; el('status-text').textContent=p[0];
+    el('footer-state').lastChild.textContent=' '+p[1]; el('quote').textContent=p[2]; el('encouragement').hidden=!state.cheer;
+    const text=state.hidden?'••••':c.phase==='off'?'—':c.amount.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+    el('amount').textContent=text; root.querySelector('.nm-currency').hidden=state.hidden||c.phase==='off';
+    el('money').setAttribute('aria-label',state.hidden?'当前收入已隐藏':c.phase==='off'?'休息日，无当前班次':'当前收入 '+text+' 元');
+    el('money').style.fontSize=text.length>11?'32px':'';
+    el('hide').setAttribute('aria-pressed',String(state.hidden)); el('hide').setAttribute('aria-label',state.hidden?'显示金额':'隐藏金额');
+    el('salary').type=state.hidden?'password':'number';
+    el('home').hidden=state.view!=='home'; el('settings').hidden=state.view!=='settings';
+  }
+  /** 按草稿口径更新字段可见性，避免在日薪模式显示月薪折算选项。 */
+  function updateDraft() {
+    root.querySelectorAll('[data-mode]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.mode===state.draftMode)));
+    el('salary-label').textContent=state.draftMode==='monthly'?'每月工资（元）':'每天工资（元）';
+    el('monthly-options').hidden=state.draftMode!=='monthly'; el('fixed-wrap').hidden=el('divisor-mode').value!=='fixed'; el('rest-fields').hidden=!el('rest-enabled').checked;
+    const days=[...root.querySelectorAll('[data-day][aria-pressed="true"]')].map(b=>Number(b.dataset.day));
+    el('divisor-note').textContent=el('divisor-mode').value==='fixed'?'按指定天数折算，不改变每周排班。':'示例月份 2026 年 11 月，折算 '+workdays(2026,10,days)+' 天；不自动识别节假日。';
+  }
+  /** 打开设置时复制已保存配置，取消编辑不会改变当前计算结果。 */
+  function openSettings(save=true) {
+    state.draftMode=state.mode; el('salary').value=state.salary; el('start').value=state.start; el('end').value=state.end;
+    el('rest-enabled').checked=state.rest; el('rest-start').value=state.restStart; el('rest-end').value=state.restEnd;
+    el('divisor-mode').value=state.divisor; el('fixed-days').value=state.fixed; el('cheer').checked=state.cheer;
+    root.querySelectorAll('[data-day]').forEach(b=>b.setAttribute('aria-pressed',String(state.days.includes(Number(b.dataset.day)))));
+    el('error').hidden=true; state.view='settings'; updateDraft(); render(); if(save) persist();
+  }
+  /** 校验设置草稿，通过后一次生效；错误时保留输入和现有配置。 */
+  function saveSettings(event) {
+    event.preventDefault(); const next={mode:state.draftMode,salary:Number(el('salary').value),days:[...root.querySelectorAll('[data-day][aria-pressed="true"]')].map(b=>Number(b.dataset.day)),start:el('start').value,end:el('end').value,rest:el('rest-enabled').checked,restStart:el('rest-start').value,restEnd:el('rest-end').value,divisor:el('divisor-mode').value,fixed:Number(el('fixed-days').value),cheer:el('cheer').checked};
+    const r=intervals(next); let error='';
+    if(!Number.isFinite(next.salary)||next.salary<=0||!/^\d+(\.\d{1,2})?$/.test(el('salary').value)) error='请填写大于 0、最多两位小数的工资。';
+    else if(!next.days.length) error='请至少选择一个工作日。';
+    else if(!Number.isFinite(r.start)||!Number.isFinite(r.end)||r.start===r.end) error='请填写不同的上下班时间。';
+    else if(next.rest&&(!Number.isFinite(r.a)||!Number.isFinite(r.b)||r.a<r.start||r.b>r.end||r.a>=r.b)) error='休息时段必须位于班次内，且结束晚于开始。';
+    else if(r.total<=0) error='扣除休息后，计薪时间必须大于 0。';
+    else if(next.mode==='monthly'&&next.divisor==='fixed'&&(!Number.isFinite(next.fixed)||next.fixed<=0)) error='请填写大于 0 的折算天数。';
+    if(error) { el('error').textContent=error; el('error').hidden=false; return; }
+    Object.assign(state,next,{view:'home'}); el('error').hidden=true; render(); persist();
+  }
+  /** 恢复可安全分享的界面偏好；工资始终保留为本页示例或用户当前输入。 */
+  function restore(saved) {
+    const p=saved?.privateContent; if(!p) return;
+    state.hidden=Boolean(p.hidden); scenario(['working','break','before','after','off'].includes(p.scenario)?p.scenario:'working',false);
+    if(p.view==='settings') openSettings(false); else { state.view='home'; render(); }
+  }
+  el('open-settings').addEventListener('click',openSettings);
+  el('back').addEventListener('click',()=>{state.view='home'; render(); persist();});
+  el('hide').addEventListener('click',()=>{state.hidden=!state.hidden; render(); persist();});
+  el('scenario').addEventListener('change',event=>scenario(event.target.value));
+  el('settings').addEventListener('submit',saveSettings);
+  el('rest-enabled').addEventListener('change',updateDraft); el('divisor-mode').addEventListener('change',updateDraft);
+  root.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>{state.draftMode=b.dataset.mode; updateDraft();}));
+  root.querySelectorAll('[data-day]').forEach(b=>b.addEventListener('click',()=>{b.setAttribute('aria-pressed',String(b.getAttribute('aria-pressed')!=='true')); updateDraft();}));
+  el('menu-toggle').addEventListener('click',()=>{const closed=!el('popover').hidden; el('popover').hidden=closed; el('collapsed').hidden=!closed; el('menu-toggle').setAttribute('aria-expanded',String(!closed)); el('menu-toggle').setAttribute('aria-label',closed?'打开收入面板':'收起收入面板');});
+  window.addEventListener('openai:set_globals',event=>{if(event.detail?.globals?.widgetState) restore(event.detail.globals.widgetState);});
+  render(); restore(window.openai?.widgetState);
+  const timer=setInterval(()=>{if(!root.isConnected) clearInterval(timer); else render();},1000);
+})();
+</script>

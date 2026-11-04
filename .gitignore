@@ -1,0 +1,22 @@
+# macOS 系统文件。
+.DS_Store
+._*
+
+# Swift 与 Xcode 的本机构建产物。
+.build/
+build/
+DerivedData/
+*.xcarchive/
+*.dSYM/
+*.app/
+*.dmg
+*.pkg
+
+# 开发者个人界面状态，不影响共享工程配置。
+xcuserdata/
+*.xcuserstate
+
+# 本地环境配置，示例配置可以纳入版本管理。
+.env
+.env.*
+!.env.example
