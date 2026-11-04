@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
+  <title>牛马上班</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <main class="app" aria-label="牛马上班">
+    <header class="brand"><span class="sprout" aria-hidden="true">✦</span><strong>牛马上班</strong><span class="platform">跨平台版</span></header>
+    <section id="home" class="panel" aria-live="polite">
+      <div class="toolbar"><span id="phase">尚未设置</span><button id="hide" class="icon" type="button" aria-label="隐藏金额">◉</button></div>
+      <div class="income">
+        <div class="label">当前已赚</div>
+        <div id="amount" class="amount">—</div>
+        <div class="label">本班预估</div>
+        <div class="year-total"><div id="year-amount" class="year-amount">—</div><div class="label">本年预估已赚</div></div>
+      </div>
+      <p id="quote" class="quote">设置一下，看看时间值多少钱。</p>
+      <footer><span id="activity">等待设置</span><button id="open-settings" type="button">⚙ 设置</button></footer>
+    </section>
+    <form id="settings" class="panel settings" hidden>
+      <div class="toolbar"><button id="back" class="icon" type="button" aria-label="返回">‹</button><strong>工资与作息</strong><span class="platform">仅本机</span></div>
+      <label>工资模式<select id="mode"><option value="monthly">月薪</option><option value="daily">日薪</option></select></label>
+      <label id="salary-label">每月工资（元）<input id="salary" type="number" min="0.01" step="0.01" required /></label>
+      <fieldset><legend>每周工作日</legend><div id="weekdays" class="weekdays"></div></fieldset>
+      <div class="row"><label>上班<input id="start" type="time" required /></label><label>下班<input id="end" type="time" required /></label></div>
+      <label class="check"><input id="rest-enabled" type="checkbox" /> 休息期间不计薪</label>
+      <div id="rest-fields" class="row"><label>休息开始<input id="rest-start" type="time" /></label><label>休息结束<input id="rest-end" type="time" /></label></div>
+      <label id="divisor-wrap">月薪折算<select id="divisor"><option value="schedule">本月排班天数</option><option value="fixed">指定折算天数</option></select></label>
+      <label id="fixed-wrap" hidden>折算天数<input id="fixed-days" type="number" min="0.01" step="0.01" /></label>
+      <label class="check"><input id="encouragement" type="checkbox" checked /> 显示鼓励文案</label>
+      <label class="check"><input id="autostart" type="checkbox" /> 登录后自动启动</label>
+      <p id="error" class="error" role="alert" hidden></p>
+      <button class="save" type="submit">保存并返回</button>
+    </form>
+  </main>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

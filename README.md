@@ -2,6 +2,28 @@
 
 以当前收入提供上班鼓励的轻量菜单栏工具，适配 Apple Silicon 与 Intel 机型，最低 macOS 13。
 
+## macOS 与 Windows 共用实现
+
+当前已加入 Tauri 2 跨平台工程骨架。工资、排班、跨夜、休息和收入快照位于 `shared/income-engine.mjs`，Tauri 版 macOS 与 Windows 共用；窗口、系统托盘、关闭后隐藏和登录自动启动位于 `src-tauri`，由 Tauri 在两个系统分别调用原生能力；界面位于 `frontend`，使用同一套 HTML/CSS/JavaScript。原有 `Sources/Niuma` 是已经交付的 Swift/AppKit macOS 版，暂时保留为兼容实现，后续可在 Tauri 版验收通过后移除。
+
+```bash
+# 安装前端与 Tauri CLI 依赖
+npm install
+
+# 验证共享收入核心
+npm run test:core
+
+# 在具备 Rust 工具链的 macOS 或 Windows 开发机运行
+npm run tauri:dev
+
+# 生成对应系统安装包
+npm run tauri:build
+```
+
+构建前会由 `scripts/sync-frontend-core.mjs` 把共享核心复制到 Tauri 的前端资源目录，源文件仍只有 `shared/income-engine.mjs` 一份。本机当前没有 Rust/Cargo，因此已经完成的 Node 核心测试和 JavaScript 静态检查可以运行，Tauri 原生编译与安装包尚未在本机完成验证。
+
+Windows 构建可以直接使用 `scripts/build-windows.ps1`，或在 GitHub Actions 手动运行“Windows 构建”工作流。工作流会上传 NSIS `.exe` 和 MSI 安装包；拿到 Windows 构建产物后仍需在 Windows 10/11 真机完成托盘、自动启动、安装升级和卸载验收。
+
 ## 原生开发版
 
 当前已有 Swift + AppKit 原生工程，无第三方运行依赖。已在本机 M5、macOS 27.2、Swift 6.4.2 命令行工具链上构建，尚未完成正式发布验收。
