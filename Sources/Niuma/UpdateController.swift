@@ -1,5 +1,6 @@
 import AppKit
 import NiumaCore
+import Sparkle
 
 /// 管理版本检查偏好和异步状态，与工资配置及收入刷新任务独立。
 @MainActor
@@ -10,6 +11,8 @@ final class UpdateController: NSObject {
     private let service: UpdateService
     /// 单独保存检查偏好与最近自动尝试时间，不改工资 JSON。
     private let defaults: UserDefaults
+    /// 成熟安装器负责签名校验、覆盖、权限及重启；不另建自动检查计时器。
+    private lazy var installer = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
     /// 24 小时低频检查任务。
     private var timer: Timer?
     /// 设置页读取的当前检查结果。
@@ -91,6 +94,12 @@ final class UpdateController: NSObject {
         }
     }
 
+    /// 明确点击更新后才下载安装，成功后原位替换并由 Sparkle 重启。
+    func installUpdate() {
+        guard release != nil else { return }
+        installer.checkForUpdates(nil)
+    }
+
     /// 打开已由核心校验的本项目正式发布页。
     func openRelease() {
         guard let release else { return }
@@ -100,7 +109,7 @@ final class UpdateController: NSObject {
     /// 定时器统一经过限频和开关检查。
     @objc private func checkAutomatically() { check(manual: false) }
 
-    /// 使用纯文本更新说明，用户主动点击后才打开系统浏览器。
+    /// 展示纯文本说明，用户可安装并重启，或选择手动下载。
     private func presentResult() {
         let alert = NSAlert()
         alert.messageText = release.map { "发现新版本 " + $0.version } ?? status
@@ -115,11 +124,14 @@ final class UpdateController: NSObject {
             text.font = .systemFont(ofSize: 12)
             scroll.documentView = text
             alert.accessoryView = scroll
-            alert.addButton(withTitle: "前往下载")
+            alert.addButton(withTitle: "安装更新")
             alert.addButton(withTitle: "稍后")
+            alert.addButton(withTitle: "手动下载")
         } else { alert.addButton(withTitle: "好") }
         if #available(macOS 14.0, *) { NSApp.activate() }
         else { NSApp.activate(ignoringOtherApps: true) }
-        if alert.runModal() == .alertFirstButtonReturn, release != nil { openRelease() }
+        let response = alert.runModal()
+        if response == .alertFirstButtonReturn, release != nil { installUpdate() }
+        if response == .alertThirdButtonReturn, release != nil { openRelease() }
     }
 }

@@ -75,8 +75,8 @@ final class SettingsWindowController: NSWindowController, NSTextFieldDelegate, N
     private let updateStatus = NSTextField(wrappingLabelWithString: "")
     /// 手动检查入口，请求期间禁用。
     private let checkUpdate = NSButton(title: "检查更新…", target: nil, action: nil)
-    /// 仅检测到本平台新版时展示的下载入口。
-    private let downloadUpdate = NSButton(title: "前往下载", target: nil, action: nil)
+    /// 用户明确点击后下载、校验并原位安装新版。
+    private let downloadUpdate = NSButton(title: "安装更新", target: nil, action: nil)
 
     /// 根据现有设置创建独立草稿，并连接实际保存与重置操作。
     init(settings: WorkSettings, dataPath: String, updates: UpdateController,
@@ -266,8 +266,8 @@ final class SettingsWindowController: NSWindowController, NSTextFieldDelegate, N
     /// 手动检查绕过每日自动检查间隔，但不并发重复请求。
     @objc private func checkUpdates() { updates.check(manual: true) }
 
-    /// 用户明确点击后打开已校验的正式发布页。
-    @objc private func openUpdateDownload() { updates.openRelease() }
+    /// 交给签名更新器替换当前应用，工资及作息配置不参与安装。
+    @objc private func openUpdateDownload() { updates.installUpdate() }
 
     /// 用 HH:mm 形式展示本地分钟时刻。
     private func timeText(_ minute: Int) -> String { String(format: "%02d:%02d", minute / 60, minute % 60) }

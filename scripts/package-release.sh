@@ -21,7 +21,7 @@ stage_dir="$dist_dir/stage"
 zip_path="$dist_dir/${app_name}-${version}-macOS-universal.zip"
 
 # 1. 构建并做基础校验（复用现有构建脚本，保证包内哈希与源码一致）。
-bash "$project_root/scripts/build-app.sh"
+NIUMA_DISTRIBUTION=1 bash "$project_root/scripts/build-app.sh"
 
 if [ -n "${DEVELOPER_ID_APP:-}" ] && [ -n "${NOTARY_PROFILE:-}" ]; then
     mode="notarized"

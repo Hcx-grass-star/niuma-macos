@@ -1,4 +1,5 @@
 import AppKit
+import NiumaInstallation
 import ServiceManagement
 import NiumaCore
 
@@ -52,6 +53,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         refresh()
         if settings == nil { showSettings() }
         updates.start()
+        // 菜单栏已创建后才回收旧副本；开发包不进行自动清理。
+        if Bundle.main.object(forInfoDictionaryKey: "NiumaInstallOnLaunch") as? Bool == true {
+            Task { @MainActor in
+                do { try await ManagedInstallation.cleanupCurrentBundle(Bundle.main.bundleURL) }
+                catch { showAlert(error.localizedDescription) }
+            }
+        }
     }
 
     /// 退出时释放定时任务和观察者，不保留独立后台进程。

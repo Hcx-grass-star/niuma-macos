@@ -1,6 +1,6 @@
 [package]
 name = "niuma"
-version = "0.2.1"
+version = "0.3.0"
 description = "牛马上班跨平台桌面应用"
 authors = ["Hcx-grass-star"]
 edition = "2021"
@@ -15,6 +15,9 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 tauri = { version = "2", features = ["tray-icon"] }
 tauri-plugin-autostart = "2"
+tauri-plugin-updater = "2"
+# Tauri 宏生成插件配置时直接引用 JSON 类型。
+serde_json = "1"
 
 [features]
 custom-protocol = ["tauri/custom-protocol"]
