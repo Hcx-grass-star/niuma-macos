@@ -32,3 +32,5 @@
 最终 Tauri macOS 更新包另使用 updater 同一 `minisign-verify 0.3.0` 校验器验证：真实签名与受签名保护的 `version:0.3.0` 接受；改动首字节后的包拒绝。此项不替代 Tauri 完整应用内重启验收。
 
 最终 Windows `.exe` 和 `.msi` 附件也已通过同一校验器的签名、版本绑定及篡改拒绝校验；实际NSIS升级日志为 [41999415016](https://github.com/Hcx-grass-star/niuma-macos/actions/runs/41999415016)。原生通用ZIP的SHA256：`d6d60ca0ced810857bbe5c1f04c1cffcc46f7943ce7f6ce6e417e9a842981575`。
+
+发布完成：v0.3.0；公开更新分支提交 `9fca7f3f4fb7d85a7b665c2116fdcc1ef061176e` 的 Pages 状态为 built。三个公开更新源的版本、真实附件链接、构建号和签名与最终安装包一致；9个附件的服务器SHA256与本地匹配。原生正式 UpdateService 实际访问公开更新源：0.2.1返回0.3.0可用，0.3.0返回最新版。
