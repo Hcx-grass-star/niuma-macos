@@ -2,16 +2,19 @@ import { execFileSync } from 'node:child_process';
 import { mkdtemp, readdir, symlink, writeFile, rm, unlink } from 'node:fs/promises';
 import { resolve, join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { readFile } from 'node:fs/promises';
 
 /** 安装验收只允许 GitHub 托管的临时 Windows runner，绝不在开发者电脑自动安装或卸载。 */
 const isolatedRunner = process.platform === 'win32' && process.env.GITHUB_ACTIONS === 'true' && process.env.RUNNER_ENVIRONMENT === 'github-hosted';
 if (isolatedRunner) {
   const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+  /** 当前构建的正式版本，供升级验收匹配安装器和注册表版本。 */
+  const currentVersion = JSON.parse(await readFile(join(root, 'package.json'), 'utf8')).version;
   const workspace = await mkdtemp(join(process.env.RUNNER_TEMP, 'niuma-upgrade-'));
   const baseline = join(workspace, 'baseline');
   const target = resolve(root, 'src-tauri/target');
   const bundles = join(target, 'release/bundle/nsis');
-  const current = (await readdir(bundles)).find((name) => name.endsWith('.exe') && name.includes('0.3.0'));
+  const current = (await readdir(bundles)).find((name) => name.endsWith('.exe') && name.includes(currentVersion));
   if (!current) throw new Error('当前正式安装包不存在。');
   try {
     execFileSync('git', ['fetch', '--depth', '1', 'origin', 'refs/tags/v0.2.1:refs/tags/v0.2.1'], { cwd: root, stdio: 'inherit' });
@@ -47,11 +50,11 @@ try {
     # 新安装器不传自定义目录，验证能沿用注册表中的旧位置。
     InstallPackage $NewInstaller @('/S')
     $after = InstalledBinary
-    if (!$after -or !$after.VersionInfo.ProductVersion.StartsWith('0.3.0')) { throw 'New installer did not replace the old executable in place.' }
+    if (!$after -or !$after.VersionInfo.ProductVersion.StartsWith('${currentVersion}')) { throw 'New installer did not replace the old executable in place.' }
     $entries = @(ProductEntries)
-    if ($entries.Count -ne 1 -or !$entries[0].DisplayVersion.StartsWith('0.3.0')) { throw 'Upgrade left duplicate uninstall entries or an old version.' }
+    if ($entries.Count -ne 1 -or !$entries[0].DisplayVersion.StartsWith('${currentVersion}')) { throw 'Upgrade left duplicate uninstall entries or an old version.' }
     if ([IO.File]::ReadAllText($sentinel) -ne 'salary-and-schedule-must-stay') { throw 'Upgrade changed persisted application data.' }
-    Write-Host 'PASS: Windows NSIS 0.2.1 -> 0.3.0; same installation path, single uninstall entry, old executable replaced, application data retained.'
+    Write-Host 'PASS: Windows NSIS 0.2.1 -> ${currentVersion}; same installation path, single uninstall entry, old executable replaced, application data retained.'
 } finally {
     $entry = @(ProductEntries) | Select-Object -First 1
     if ($entry -and $entry.UninstallString) {
