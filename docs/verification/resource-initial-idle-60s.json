@@ -1,0 +1,313 @@
+{
+  "averageCPUPercent" : 0.0005799681680082336,
+  "maxFootprintMiB" : 52.25114440917969,
+  "pid" : 47463,
+  "samples" : [
+    {
+      "cpuPercent" : 0,
+      "elapsedSeconds" : 0,
+      "footprintMiB" : 52.11051940917969
+    },
+    {
+      "cpuPercent" : 0,
+      "elapsedSeconds" : 1.0051025833381573,
+      "footprintMiB" : 52.11051940917969
+    },
+    {
+      "cpuPercent" : 0.0001835565576193469,
+      "elapsedSeconds" : 2.009697583329398,
+      "footprintMiB" : 52.11051940917969
+    },
+    {
+      "cpuPercent" : 0,
+      "elapsedSeconds" : 3.0116160833422327,
+      "footprintMiB" : 52.11051940917969
+    },
+    {
+      "cpuPercent" : 0,
+      "elapsedSeconds" : 4.013474250008585,
+      "footprintMiB" : 52.11051940917969
+    },
+    {
+      "cpuPercent" : 8.42958820301805e-05,
+      "elapsedSeconds" : 5.018268291663844,
+      "footprintMiB" : 52.11051940917969
+    },
+    {
+      "cpuPercent" : 0,
+      "elapsedSeconds" : 6.023320833337493,
+      "footprintMiB" : 52.11051940917969
+    },
+    {
+      "cpuPercent" : 0.0006349802174711674,
+      "elapsedSeconds" : 7.023666958339163,
+      "footprintMiB" : 52.11051940917969
+    },
+    {
+      "cpuPercent" : 0.00911873223620695,
+      "elapsedSeconds" : 8.026755958329886,
+      "footprintMiB" : 52.12614440917969
+    },
+    {
+      "cpuPercent" : 0.008116281610605413,
+      "elapsedSeconds" : 9.030121833333396,
+      "footprintMiB" : 52.25114440917969
+    },
+    {
+      "cpuPercent" : 0.00043181317214679277,
+      "elapsedSeconds" : 10.035186125009204,
+      "footprintMiB" : 52.25114440917969
+    },
+    {
+      "cpuPercent" : 0.0004061353769701656,
+      "elapsedSeconds" : 11.040269708333653,
+      "footprintMiB" : 52.25114440917969
+    },
+    {
+      "cpuPercent" : 0,
+      "elapsedSeconds" : 12.043533916672459,
+      "footprintMiB" : 52.25114440917969
+    },
+    {
+      "cpuPercent" : 0.007137602649428217,
+      "elapsedSeconds" : 13.045340875003603,
+      "footprintMiB" : 52.25114440917969
+    },
+    {
+      "cpuPercent" : 0.0032361605593104184,
+      "elapsedSeconds" : 14.046774500005995,
+      "footprintMiB" : 52.15739440917969
+    },
+    {
+      "cpuPercent" : 0,
+      "elapsedSeconds" : 15.05026920833916,
+      "footprintMiB" : 52.15739440917969
+    },
+    {
+      "cpuPercent" : 0,
+      "elapsedSeconds" : 16.050505791674368,
+      "footprintMiB" : 52.15739440917969
+    },
+    {
+      "cpuPercent" : 6.0122831242908644e-05,
+      "elapsedSeconds" : 17.055115833340096,
+      "footprintMiB" : 52.15739440917969
+    },
+    {
+      "cpuPercent" : 0,
+      "elapsedSeconds" : 18.0577078750066,
+      "footprintMiB" : 52.15739440917969
+    },
+    {
+      "cpuPercent" : 0,
+      "elapsedSeconds" : 19.06222479167627,
+      "footprintMiB" : 52.15739440917969
+    },
+    {
+      "cpuPercent" : 0.00011524880562435829,
+      "elapsedSeconds" : 20.064404375007143,
+      "footprintMiB" : 52.15739440917969
+    },
+    {
+      "cpuPercent" : 0,
+      "elapsedSeconds" : 21.067970333329868,
+      "footprintMiB" : 52.15739440917969
+    },
+    {
+      "cpuPercent" : 0,
+      "elapsedSeconds" : 22.069340666668722,
+      "footprintMiB" : 52.15739440917969
+    },
+    {
+      "cpuPercent" : 0.00013304380846396692,
+      "elapsedSeconds" : 23.07201791666739,
+      "footprintMiB" : 52.15739440917969
+    },
+    {
+      "cpuPercent" : 0,
+      "elapsedSeconds" : 24.07284675000119,
+      "footprintMiB" : 52.15739440917969
+    },
+    {
+      "cpuPercent" : 0,
+      "elapsedSeconds" : 25.07377720833756,
+      "footprintMiB" : 52.15739440917969
+    },
+    {
+      "cpuPercent" : 0.0001270462635660345,
+      "elapsedSeconds" : 26.078135750009096,
+      "footprintMiB" : 52.15739440917969
+    },
+    {
+      "cpuPercent" : 0,
+      "elapsedSeconds" : 27.083172875005403,
+      "footprintMiB" : 52.15739440917969
+    },
+    {
+      "cpuPercent" : 0,
+      "elapsedSeconds" : 28.08526533334225,
+      "footprintMiB" : 52.15739440917969
+    },
+    {
+      "cpuPercent" : 7.176505615748201e-05,
+      "elapsedSeconds" : 29.0885391250049,
+      "footprintMiB" : 52.15739440917969
+    },
+    {
+      "cpuPercent" : 0,
+      "elapsedSeconds" : 30.088604666671017,
+      "footprintMiB" : 52.15739440917969
+    },
+    {
+      "cpuPercent" : 0,
+      "elapsedSeconds" : 31.090481791674392,
+      "footprintMiB" : 52.15739440917969
+    },
+    {
+      "cpuPercent" : 6.569335982021015e-05,
+      "elapsedSeconds" : 32.095149541666615,
+      "footprintMiB" : 52.15739440917969
+    },
+    {
+      "cpuPercent" : 0,
+      "elapsedSeconds" : 33.09611549999681,
+      "footprintMiB" : 52.15739440917969
+    },
+    {
+      "cpuPercent" : 0,
+      "elapsedSeconds" : 34.09685320833523,
+      "footprintMiB" : 52.15739440917969
+    },
+    {
+      "cpuPercent" : 0.00012862540886072503,
+      "elapsedSeconds" : 35.101320375004434,
+      "footprintMiB" : 52.15739440917969
+    },
+    {
+      "cpuPercent" : 0,
+      "elapsedSeconds" : 36.1045721249975,
+      "footprintMiB" : 52.15739440917969
+    },
+    {
+      "cpuPercent" : 0,
+      "elapsedSeconds" : 37.10726995833102,
+      "footprintMiB" : 52.15739440917969
+    },
+    {
+      "cpuPercent" : 0.0001118336639982246,
+      "elapsedSeconds" : 38.1078631249984,
+      "footprintMiB" : 52.15739440917969
+    },
+    {
+      "cpuPercent" : 0,
+      "elapsedSeconds" : 39.10883154167095,
+      "footprintMiB" : 52.15739440917969
+    },
+    {
+      "cpuPercent" : 0,
+      "elapsedSeconds" : 40.10994404167286,
+      "footprintMiB" : 52.15739440917969
+    },
+    {
+      "cpuPercent" : 0.00010305713298377662,
+      "elapsedSeconds" : 41.112300666674855,
+      "footprintMiB" : 52.15739440917969
+    },
+    {
+      "cpuPercent" : 0,
+      "elapsedSeconds" : 42.11293104167271,
+      "footprintMiB" : 52.15739440917969
+    },
+    {
+      "cpuPercent" : 0,
+      "elapsedSeconds" : 43.115414875006536,
+      "footprintMiB" : 52.15739440917969
+    },
+    {
+      "cpuPercent" : 0.00011477299487110533,
+      "elapsedSeconds" : 44.11565016667009,
+      "footprintMiB" : 52.15739440917969
+    },
+    {
+      "cpuPercent" : 0,
+      "elapsedSeconds" : 45.116568666664534,
+      "footprintMiB" : 52.15739440917969
+    },
+    {
+      "cpuPercent" : 0,
+      "elapsedSeconds" : 46.12130766667542,
+      "footprintMiB" : 52.15739440917969
+    },
+    {
+      "cpuPercent" : 6.744113232187573e-05,
+      "elapsedSeconds" : 47.122180541671696,
+      "footprintMiB" : 52.15739440917969
+    },
+    {
+      "cpuPercent" : 0,
+      "elapsedSeconds" : 48.12725345834042,
+      "footprintMiB" : 52.15739440917969
+    },
+    {
+      "cpuPercent" : 0,
+      "elapsedSeconds" : 49.12742245833215,
+      "footprintMiB" : 52.15739440917969
+    },
+    {
+      "cpuPercent" : 8.198718087927963e-05,
+      "elapsedSeconds" : 50.13245762500446,
+      "footprintMiB" : 52.15739440917969
+    },
+    {
+      "cpuPercent" : 0,
+      "elapsedSeconds" : 51.13727354166622,
+      "footprintMiB" : 52.15739440917969
+    },
+    {
+      "cpuPercent" : 0,
+      "elapsedSeconds" : 52.13943304166605,
+      "footprintMiB" : 52.15739440917969
+    },
+    {
+      "cpuPercent" : 6.895173913003381e-05,
+      "elapsedSeconds" : 53.14448383334093,
+      "footprintMiB" : 52.15739440917969
+    },
+    {
+      "cpuPercent" : 0,
+      "elapsedSeconds" : 54.146901791667915,
+      "footprintMiB" : 52.15739440917969
+    },
+    {
+      "cpuPercent" : 0.004090079475472517,
+      "elapsedSeconds" : 55.15003633333254,
+      "footprintMiB" : 52.14176940917969
+    },
+    {
+      "cpuPercent" : 0,
+      "elapsedSeconds" : 56.15388900000835,
+      "footprintMiB" : 52.14176940917969
+    },
+    {
+      "cpuPercent" : 0,
+      "elapsedSeconds" : 57.15818458334252,
+      "footprintMiB" : 52.14176940917969
+    },
+    {
+      "cpuPercent" : 0.00011274169093505908,
+      "elapsedSeconds" : 58.16224970832991,
+      "footprintMiB" : 52.14176940917969
+    },
+    {
+      "cpuPercent" : 0,
+      "elapsedSeconds" : 59.167285625007935,
+      "footprintMiB" : 52.14176940917969
+    },
+    {
+      "cpuPercent" : 0,
+      "elapsedSeconds" : 60.17175066667551,
+      "footprintMiB" : 52.14176940917969
+    }
+  ],
+  "startedAt" : "2026-11-04T06:57:49Z"
+}

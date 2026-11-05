@@ -1,0 +1,39 @@
+:root { color-scheme: light dark; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif; color: #202b25; background: #eef3ef; }
+@media (prefers-color-scheme: dark) { :root { color: #edf3ef; background: #1b201d; } }
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; }
+.app { width: min(390px, 100vw); margin: 0 auto; padding: 18px; }
+.brand, .toolbar, footer { display: flex; align-items: center; }
+.brand { gap: 8px; padding: 2px 4px 14px; }
+.sprout { color: #28664b; font-size: 18px; }
+.platform { margin-left: auto; color: #718078; font-size: 11px; }
+.panel { border: 1px solid #dbe4dd; border-radius: 18px; background: #fff; box-shadow: 0 12px 36px #23462b22; overflow: hidden; }
+@media (prefers-color-scheme: dark) { .panel { border-color: #3b473f; background: #232a25; box-shadow: 0 12px 36px #0006; } }
+.toolbar { justify-content: space-between; padding: 16px 18px 10px; }
+.toolbar > strong { font-size: 14px; }
+.icon { border: 0; border-radius: 8px; background: transparent; color: #718078; font-size: 20px; cursor: pointer; }
+.income { padding: 28px 18px 30px; text-align: center; }
+.label { color: #718078; font-size: 12px; }
+.amount { margin: 6px 0; font-size: 50px; font-variant-numeric: tabular-nums; letter-spacing: -2px; }
+.year-total { margin-top: 12px; }
+.year-amount { margin: 4px 0; font-size: 22px; font-variant-numeric: tabular-nums; }
+.quote { min-height: 22px; margin: 0 24px 24px; color: #718078; text-align: center; font-size: 12px; }
+footer { justify-content: space-between; border-top: 1px solid #dbe4dd; padding: 10px 16px; color: #718078; font-size: 11px; }
+button { border: 0; background: transparent; color: inherit; cursor: pointer; }
+footer button, .save { border-radius: 8px; padding: 8px 12px; }
+footer button:hover, .icon:hover { background: #edf3ee; }
+.settings { padding-bottom: 18px; }
+.settings label, fieldset { display: block; margin: 0 18px 13px; color: #718078; font-size: 11px; }
+fieldset { border: 0; padding: 0; }
+legend { margin-bottom: 6px; padding: 0; }
+select, input[type="number"], input[type="time"] { width: 100%; margin-top: 5px; border: 1px solid #dbe4dd; border-radius: 8px; padding: 8px; background: transparent; color: inherit; }
+.row { display: flex; gap: 10px; }
+.row label { flex: 1; margin: 0; }
+.weekdays { display: flex; gap: 4px; }
+.weekday { flex: 1; border: 1px solid #dbe4dd; border-radius: 8px; padding: 7px 0; }
+.weekday[aria-pressed="true"] { border-color: transparent; background: #e2f0e5; color: #28664b; }
+.check { color: inherit !important; }
+.check input { accent-color: #28664b; }
+.error { margin: 0 18px 12px; color: #b33535; font-size: 12px; }
+.save { display: block; width: calc(100% - 36px); margin: 18px; background: #28664b; color: #fff; font-weight: 600; }
+[hidden] { display: none !important; }

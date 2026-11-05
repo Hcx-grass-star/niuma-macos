@@ -5,6 +5,7 @@
 # Swift 与 Xcode 的本机构建产物。
 .build/
 build/
+dist/
 DerivedData/
 *.xcarchive/
 *.dSYM/
@@ -15,8 +16,13 @@ DerivedData/
 # 开发者个人界面状态，不影响共享工程配置。
 xcuserdata/
 *.xcuserstate
+.idea/
 
 # 本地环境配置，示例配置可以纳入版本管理。
 .env
 .env.*
 !.env.example
+
+# Tauri 与前端的本地依赖、由共享核心同步生成的前端副本。
+node_modules/
+frontend/income-engine.mjs

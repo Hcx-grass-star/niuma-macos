@@ -1,0 +1,58 @@
+{
+  "averageCPUPercent" : 0.001273048795623816,
+  "lifetimePeakFootprintMiB" : 115.2354736328125,
+  "maxFootprintMiB" : 42.8292236328125,
+  "pid" : 73120,
+  "samples" : [
+    {
+      "cpuPercent" : 0,
+      "elapsedSeconds" : 0,
+      "footprintMiB" : 42.8135986328125,
+      "visibleSurfaces" : [
+
+      ]
+    },
+    {
+      "cpuPercent" : 0.0007597466934118347,
+      "elapsedSeconds" : 1.040083500003675,
+      "footprintMiB" : 42.8135986328125,
+      "visibleSurfaces" : [
+
+      ]
+    },
+    {
+      "cpuPercent" : 0,
+      "elapsedSeconds" : 2.0455208333441988,
+      "footprintMiB" : 42.8135986328125,
+      "visibleSurfaces" : [
+
+      ]
+    },
+    {
+      "cpuPercent" : 0.002712799271152784,
+      "elapsedSeconds" : 3.048838708331459,
+      "footprintMiB" : 42.8292236328125,
+      "visibleSurfaces" : [
+
+      ]
+    },
+    {
+      "cpuPercent" : 0,
+      "elapsedSeconds" : 4.052928625009372,
+      "footprintMiB" : 42.8292236328125,
+      "visibleSurfaces" : [
+
+      ]
+    },
+    {
+      "cpuPercent" : 0.002911646482355334,
+      "elapsedSeconds" : 5.0584078333340585,
+      "footprintMiB" : 42.8292236328125,
+      "visibleSurfaces" : [
+
+      ]
+    }
+  ],
+  "sourceHash" : "b1e26a1cf667959cd960d4c55ac35d6fed5ee15de4a4e24a81024984a9d012f6",
+  "startedAt" : "2026-11-04T07:24:21Z"
+}
