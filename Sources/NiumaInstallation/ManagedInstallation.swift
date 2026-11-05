@@ -165,7 +165,7 @@ public enum ManagedInstallation {
         let configuration = NSWorkspace.OpenConfiguration()
         configuration.createsNewApplicationInstance = true
         configuration.environment = restoring ? ["NIUMA_SKIP_INSTALLATION": "1"] : ["NIUMA_INSTALLATION_MANAGED": "1"]
-        if let receipt { configuration.environment?["NIUMA_INSTALLATION_RECEIPT"] = receipt.path }
+        if let receipt { configuration.environment["NIUMA_INSTALLATION_RECEIPT"] = receipt.path }
         return try await NSWorkspace.shared.openApplication(at: url, configuration: configuration)
     }
 

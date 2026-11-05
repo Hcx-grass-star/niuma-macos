@@ -18,11 +18,13 @@ for (const argument of process.argv.slice(2)) {
     const key = resolve(keyRoot, 'sparkle-ed25519.key');
     if ((await stat(key)).mode & 0o077) throw new Error('发布私钥权限必须为 600。');
     const tool = resolve(root, '.build/artifacts/sparkle/Sparkle/bin/sign_update');
-    const entries = execFileSync('/usr/bin/unzip', ['-Z1', file], { encoding: 'utf8' }).split('\n');
-    const plist = entries.filter((name) => /(?:^|\/)牛马上班\.app\/Contents\/Info\.plist$/.test(name));
-    if (plist.length !== 1) throw new Error('更新包必须包含唯一正式应用。');
-    const infoData = execFileSync('/usr/bin/unzip', ['-p', file, plist[0]]);
-    const info = JSON.parse(execFileSync('python3', ['-c', 'import plistlib,sys,json; print(json.dumps(plistlib.loads(sys.stdin.buffer.read())))'], { input: infoData, encoding: 'utf8' }));
+    // ditto 的 ZIP 文件名可能未标 UTF-8；按包内身份匹配，避免终端替换中文名后误判。
+    const infos = JSON.parse(execFileSync('python3', ['-c', `import zipfile,plistlib,sys,json
+with zipfile.ZipFile(sys.argv[1]) as archive:
+    infos = [plistlib.loads(archive.read(name)) for name in archive.namelist() if name.endswith('.app/Contents/Info.plist') and not name.startswith('__MACOSX/')]
+print(json.dumps([info for info in infos if info.get('CFBundleIdentifier') == 'com.hcxgrassstar.niuma']))`, file], { encoding: 'utf8' }));
+    if (infos.length !== 1) throw new Error('更新包必须包含唯一正式应用。');
+    const info = infos[0];
     const publicKey = (await readFile(resolve(keyRoot, 'sparkle-ed25519.pub'), 'utf8')).trim();
     if (info.CFBundleIdentifier !== 'com.hcxgrassstar.niuma' || info.CFBundleShortVersionString !== version || info.SUPublicEDKey !== publicKey) throw new Error('应用身份、版本或更新公钥与发布配置不符。');
     const signature = execFileSync(tool, ['--ed-key-file', key, '-p', file], { encoding: 'utf8' }).trim();
