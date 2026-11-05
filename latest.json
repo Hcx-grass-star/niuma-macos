@@ -1,6 +1,7 @@
 {
-  "version": "0.2.1",
-  "notes": "修复 0.2.0 检查更新时容易遇到 GitHub 匿名 API 限流的问题。\n\n- 原生 macOS 与跨平台共享检查逻辑优先读取静态版本清单，主源正常时不调用 GitHub API。\n- 静态清单不可用或内容无效时回退 GitHub API；双源失败继续明确提示，不影响收入计算。\n- 保留每天一次自动检查、自动检查开关、手动检查、版本说明和手动下载方式。\n- 下载地址只接受本仓库正式发布及匹配版本的平台安装包，客户端不嵌入 Token。\n\n升级：旧 0.2.0 仍使用原来的检查逻辑，这次请手动下载下方 ZIP，解压后先退出旧应用，再将新版“牛马上班.app”替换进“应用程序”，重新打开后确认设置中的版本为 0.2.1。工资和排班配置保留。\n\n本次附件为 macOS 13 及以上的 arm64/x86_64 通用包，使用临时签名；首次打开如被系统拦截，请按包内安装说明操作。收入回归、双源 HTTP 集成、真实线上静态源及前端 CSP/CORS 验证通过。Windows 原生安装包及 Intel/macOS 13 实机未验证，本次不提供 Windows 安装包。\n\n静态清单：https://hcx-grass-star.github.io/niuma-macos/latest.json\n",
-  "url": "https://github.com/Hcx-grass-star/niuma-macos/releases/tag/v0.2.1",
-  "macos": "https://github.com/Hcx-grass-star/niuma-macos/releases/download/v0.2.1/niuma-0.2.1-macOS-universal.zip"
+  "version": "0.2.2",
+  "notes": "牛马上班 0.2.2 统一发布 macOS 与 Windows 版本。\n\n主要变化：\n\n- 新增本年预估已赚，并与当前收入共用隐私隐藏状态。\n- 更新检查改为静态清单优先、GitHub API 备用，降低匿名 API 限流影响。\n- Windows 版优化首页和设置布局，增加无边框窗口、窗口拖动、最小化与关闭到托盘。\n- Windows 托盘支持悬停和菜单显示当前收入，并修复托盘图标空白。\n- 修复 macOS 从其他应用打开设置时窗口未可靠前置的问题。\n\n安装说明：\n\n- macOS：下载 universal ZIP，解压后先退出旧版，再替换“应用程序”中的牛马上班.app。该包为 ad-hoc 临时签名，首次打开需按包内说明放行。\n- Windows：先从旧版托盘菜单选择“退出牛马上班”，再运行 EXE 或 MSI 安装。EXE 与 MSI 二选一即可。\n\n验证范围：收入与更新集成测试通过；macOS 通用架构及 ad-hoc 签名验证通过；Windows Rust/Tauri、NSIS 和 MSI 构建通过。Windows 真机的托盘图标、无边框拖动、登录启动及安装升级仍需安装后复验。\n",
+  "url": "https://github.com/Hcx-grass-star/niuma-macos/releases/tag/v0.2.2",
+  "macos": "https://github.com/Hcx-grass-star/niuma-macos/releases/download/v0.2.2/niuma-0.2.2-macOS-universal.zip",
+  "windows": "https://github.com/Hcx-grass-star/niuma-macos/releases/download/v0.2.2/niuma-0.2.2-windows-x64-setup.exe"
 }
