@@ -1,0 +1,8 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "desktop-pet",
+  "description": "桌面宠物仅需要关闭隐藏和原生拖动能力",
+  "windows": ["pet"],
+  "platforms": ["windows"],
+  "permissions": ["core:window:allow-close", "core:window:allow-start-dragging"]
+}

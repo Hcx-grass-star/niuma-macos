@@ -1,4 +1,5 @@
 import AppKit
+import NiumaInstallation
 import ServiceManagement
 import NiumaCore
 
@@ -33,7 +34,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         catch { configurationError = error.localizedDescription }
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         item.button?.target = self
-        item.button?.action = #selector(togglePopover)
+        item.button?.action = #selector(handleStatusClick)
+        item.button?.sendAction(on: [.leftMouseUp, .rightMouseUp])
         item.button?.setAccessibilityLabel("牛马上班")
         item.button?.image = NSImage(systemSymbolName: "leaf", accessibilityDescription: "牛马上班")
         item.button?.image?.isTemplate = true
@@ -41,7 +43,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         configureMainMenu()
         popover.behavior = .transient
         popover.animates = false
-        popover.contentSize = NSSize(width: 360, height: 420)
+        popover.contentSize = NSSize(width: 360, height: 480)
         popover.delegate = self
         NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(environmentChanged),
                                                          name: NSWorkspace.didWakeNotification, object: nil)
@@ -52,6 +54,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         refresh()
         if settings == nil { showSettings() }
         updates.start()
+        do { try ManagedInstallation.confirmStartup() }
+        catch { showAlert(error.localizedDescription) }
+        // 菜单栏已创建后才回收旧副本；开发包不进行自动清理。
+        if Bundle.main.object(forInfoDictionaryKey: "NiumaInstallOnLaunch") as? Bool == true {
+            Task { @MainActor in
+                do { try await ManagedInstallation.cleanupCurrentBundle(Bundle.main.bundleURL) }
+                catch { showAlert(error.localizedDescription) }
+            }
+        }
     }
 
     /// 退出时释放定时任务和观察者，不保留独立后台进程。
@@ -67,6 +78,36 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         if settings == nil { showSettings() }
         else { togglePopover() }
         return false
+    }
+
+    /// 左键继续查看收入，右键直接选择菜单栏的展示指标。
+    @objc private func handleStatusClick() {
+        guard NSApp.currentEvent?.type == .rightMouseUp else { togglePopover(); return }
+        let menu = NSMenu()
+        for (index, display) in MenuBarDisplay.allCases.enumerated() {
+            let item = NSMenuItem(title: display.title, action: #selector(changeMenuBarDisplay(_:)), keyEquivalent: "")
+            item.target = self
+            item.tag = index
+            item.state = (settings?.menuBarDisplay ?? .icon) == display ? .on : .off
+            menu.addItem(item)
+        }
+        menu.addItem(.separator())
+        let settingsItem = NSMenuItem(title: "设置…", action: #selector(openSettingsFromMenu), keyEquivalent: "")
+        settingsItem.target = self
+        menu.addItem(settingsItem)
+        menu.addItem(NSMenuItem(title: "退出牛马上班", action: #selector(NSApplication.terminate(_:)), keyEquivalent: ""))
+        if let button = statusItem?.button, let event = NSApp.currentEvent {
+            NSMenu.popUpContextMenu(menu, with: event, for: button)
+        }
+    }
+
+    /// 明确选择后保存展示偏好，不改变金额隐藏状态或工资排班。
+    @objc private func changeMenuBarDisplay(_ sender: NSMenuItem) {
+        guard var next = settings else { showSettings(); return }
+        next.menuBarDisplay = MenuBarDisplay.allCases[sender.tag]
+        next.menuBarIncome = next.menuBarDisplay != .icon
+        do { try save(next) }
+        catch { showAlert(error.localizedDescription) }
     }
 
     /// 展开时按实际时间重算，收起时按需停止秒级刷新。
@@ -107,11 +148,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         do {
             let snapshot = try IncomeEngine().evaluate(settings, at: Date())
             income?.render(snapshot, settings: settings, error: configurationError)
+            if let income { popover.contentSize = income.preferredContentSize }
             guard let button = statusItem?.button else { return }
-            let showMoney = settings?.menuBarIncome == true && settings?.hideAmounts == false && snapshot.amount != nil
-            button.title = showMoney ? " " + IncomeViewController.money(snapshot.amount) : ""
-            button.toolTip = "牛马上班 · 点击查看当前收入"
-            let needsUpdates = popover.isShown || (settings?.menuBarIncome == true && settings?.hideAmounts == false)
+            let menuAmount = settings?.menuBarAmount(in: snapshot)
+            button.title = menuAmount.map { " " + IncomeViewController.money($0) } ?? ""
+            button.toolTip = menuAmount == nil ? "牛马上班 · 左键查看收入，右键选择显示内容" : "牛马上班 · " + (settings?.menuBarDisplay.title ?? "")
+            let needsUpdates = popover.isShown || (settings?.menuBarDisplay != .icon && settings?.hideAmounts == false)
             guard needsUpdates, configurationError == nil else { return }
             let delay: TimeInterval?
             if snapshot.phase == .working { delay = 1 }

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+    <!-- 允许新版启动交接；同路径旧包由安装助手确认退出后替换。 -->
+    <key>LSMultipleInstancesProhibited</key><false/>
+</dict></plist>

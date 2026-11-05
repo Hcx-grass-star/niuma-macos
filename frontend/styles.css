@@ -71,6 +71,7 @@ select, input[type="number"], input[type="time"] { width: 100%; margin-top: 5px;
 .weekday[aria-pressed="true"] { border-color: transparent; background: #e2f0e5; color: #28664b; }
 .check { color: inherit !important; }
 .check input { accent-color: #28664b; }
+.holiday-status { margin: -5px 18px 13px; color: #718078; font-size: 11px; line-height: 1.5; }
 .error { margin: 0 18px 12px; color: #b33535; font-size: 12px; }
 .save { display: block; width: calc(100% - 36px); margin: 18px; background: #28664b; color: #fff; font-weight: 600; }
 /* 键盘操作保持清晰焦点，避免 Windows 高对比度或无鼠标操作时迷失位置。 */
@@ -86,3 +87,12 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
   .quote { margin-bottom: 12px; }
 }
 [hidden] { display: none !important; }
+
+/* 本月金额增加后允许短窗口滚动，保持底部设置入口可达。 */
+#home { overflow-y: auto; }
+#home .income { flex-shrink: 0; padding-top: 8px; padding-bottom: 8px; }
+.month-total { margin-top: 12px; }
+
+/* 面板显示可独立多选，隐藏区域连同标题和说明一起退出布局。 */
+.income-display label { margin: 8px 0; }
+#home footer { justify-content: flex-end; gap: 8px; }

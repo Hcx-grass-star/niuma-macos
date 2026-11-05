@@ -1,6 +1,6 @@
 import Foundation
 
-/// 当前班次及本年预估收入共同使用的工资输入口径。
+/// 当前班次、本月及本年预估收入共同使用的工资输入口径。
 public enum PayMode: String, Codable, Sendable {
     case monthly, daily
 }
@@ -8,6 +8,20 @@ public enum PayMode: String, Codable, Sendable {
 /// 月薪折算依据，手动天数不改变实际排班。
 public enum DivisorMode: String, Codable, Sendable {
     case schedule, fixed
+}
+
+/// 菜单栏可展示的内容；收入指标与详情面板使用相同快照。
+public enum MenuBarDisplay: String, Codable, CaseIterable, Sendable {
+    case icon, current, month
+
+    /// 设置选择器和菜单中的统一中文名称。
+    public var title: String {
+        switch self {
+        case .icon: return "仅图标"
+        case .current: return "当前班次已赚"
+        case .month: return "本月预估已赚"
+        }
+    }
 }
 
 /// 每天的非计薪休息时段，分钟值均为本地钟表时间。
@@ -44,13 +58,54 @@ public struct WorkSettings: Codable, Equatable, Sendable {
     public var fixedDays: Decimal?
     /// 是否在收入面板显示鼓励文案。
     public var encouragement = true
-    /// 是否直接在菜单栏显示当前收入。
+    /// 兼容旧版的菜单栏金额开关，新版按 menuBarDisplay 选择内容。
     public var menuBarIncome = false
+    /// 菜单栏展示指标，默认仅图标，旧版开关在解码时迁移。
+    public var menuBarDisplay: MenuBarDisplay = .icon
+    /// 收入面板是否展示当前班次整块金额与说明。
+    public var showCurrentIncome = true
+    /// 收入面板是否展示本月预估已赚。
+    public var showMonthlyIncome = true
+    /// 收入面板是否展示本年预估已赚及回算说明。
+    public var showYearlyIncome = true
     /// 工资及收入的隐私显示偏好。
     public var hideAmounts = false
+    /// 是否让内置中国大陆节假日及调休安排覆盖每周排班。
+    public var chinaHolidayEnabled = false
 
     /// 创建首次使用设置，工资留空等待用户输入。
     public init() {}
+
+    /// 兼容旧版本配置；日历开关默认关闭，菜单栏旧开关迁移到对应展示指标。
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        payMode = try container.decodeIfPresent(PayMode.self, forKey: .payMode) ?? .monthly
+        salary = try container.decodeIfPresent(Decimal.self, forKey: .salary)
+        weekdays = try container.decodeIfPresent(Set<Int>.self, forKey: .weekdays) ?? [2, 3, 4, 5, 6]
+        startMinute = try container.decodeIfPresent(Int.self, forKey: .startMinute) ?? 540
+        endMinute = try container.decodeIfPresent(Int.self, forKey: .endMinute) ?? 1080
+        rests = try container.decodeIfPresent([RestPeriod].self, forKey: .rests) ?? [.init(start: 720, end: 780)]
+        divisorMode = try container.decodeIfPresent(DivisorMode.self, forKey: .divisorMode) ?? .schedule
+        fixedDays = try container.decodeIfPresent(Decimal.self, forKey: .fixedDays)
+        encouragement = try container.decodeIfPresent(Bool.self, forKey: .encouragement) ?? true
+        menuBarIncome = try container.decodeIfPresent(Bool.self, forKey: .menuBarIncome) ?? false
+        menuBarDisplay = try container.decodeIfPresent(MenuBarDisplay.self, forKey: .menuBarDisplay) ?? (menuBarIncome ? .current : .icon)
+        showCurrentIncome = try container.decodeIfPresent(Bool.self, forKey: .showCurrentIncome) ?? true
+        showMonthlyIncome = try container.decodeIfPresent(Bool.self, forKey: .showMonthlyIncome) ?? true
+        showYearlyIncome = try container.decodeIfPresent(Bool.self, forKey: .showYearlyIncome) ?? true
+        hideAmounts = try container.decodeIfPresent(Bool.self, forKey: .hideAmounts) ?? false
+        chinaHolidayEnabled = try container.decodeIfPresent(Bool.self, forKey: .chinaHolidayEnabled) ?? false
+    }
+
+    /// 按所选指标返回菜单栏金额，隐藏金额或仅图标时不提供金额。
+    public func menuBarAmount(in snapshot: IncomeSnapshot) -> Decimal? {
+        guard !hideAmounts else { return nil }
+        switch menuBarDisplay {
+        case .icon: return nil
+        case .current: return snapshot.amount
+        case .month: return snapshot.monthToDateAmount
+        }
+    }
 
     /// 把休息展开到班次时间轴，并拒绝超界、重叠和零计薪时长。
     public func normalizedRests() throws -> [Range<Int>] {

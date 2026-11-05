@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { checkForUpdate, compareVersions, shouldCheckAutomatically } from './update-check.mjs';
-import { createManifest } from '../scripts/publish-updates.mjs';
+import { createManifest, createAppcast, createTauriFeed, tauriTargets } from '../scripts/publish-updates.mjs';
 
 /** 通过真实本地 HTTP 响应验证更新判断、平台安装包筛选及失败边界。 */
 export async function runUpdateTests(baseURL, counts) {
@@ -54,6 +54,20 @@ export async function runUpdateTests(baseURL, counts) {
   assert.equal(createManifest(official).macos, asset.browser_download_url);
   assert.equal(createManifest(official).windows, undefined);
   for (const changes of [{ draft: true }, { prerelease: true }, { tag_name: 'v0.3.0-beta' }, { assets: [] }, { assets: [{ ...asset, state: 'starter' }] }, { assets: [{ ...asset, browser_download_url: 'https://example.com/app.zip' }] }]) assert.throws(() => createManifest({ ...official, ...changes }));
+  const signatureMetadata = { version: '0.3.0', build: '4', length: asset.size, signature: Buffer.alloc(64, 1).toString('base64') };
+  const appcast = createAppcast({ ...official, published_at: '2026-11-05T00:00:00Z' }, asset, signatureMetadata);
+  assert.match(appcast, /sparkle:version="4"/);
+  assert.match(appcast, /sparkle:shortVersionString="0.3.0"/);
+  assert.match(appcast, /sparkle:format="plain-text"/);
+  assert.throws(() => createAppcast(official, asset, { ...signatureMetadata, length: 999 }));
+  assert.throws(() => createAppcast(official, asset, { ...signatureMetadata, version: '0.2.1' }));
+  const installer = { ...asset, name: 'niuma-0.3.0-x64-setup.exe', browser_download_url: 'https://github.com/Hcx-grass-star/niuma-macos/releases/download/v0.3.0/niuma-0.3.0-x64-setup.exe' };
+  const feed = createTauriFeed(official, [{ asset: installer, signature: 'public-signature-fixture' }]);
+  assert.equal(feed.platforms['windows-x86_64-nsis'].url, installer.browser_download_url);
+  assert.equal(feed.platforms['windows-x86_64'].signature, 'public-signature-fixture');
+  assert.deepEqual(tauriTargets('niuma-0.3.0-macOS-universal.app.tar.gz'), ['darwin-aarch64', 'darwin-x86_64']);
+  assert.deepEqual(tauriTargets('niuma-0.3.0-macOS-universal.zip'), [], 'Tauri 不能安装原生 Swift ZIP');
+  assert.throws(() => createTauriFeed(official, [{ asset: installer, signature: '' }]));
   console.log('PASS: JS 静态源优先、API限流隔离、失败回退、平台筛选与双源错误（真实HTTP）');
 }
 

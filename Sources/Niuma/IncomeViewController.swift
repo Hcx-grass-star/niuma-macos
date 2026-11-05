@@ -1,7 +1,7 @@
 import AppKit
 import NiumaCore
 
-/// 展示当前班次收入、本年预估收入、工作状态和一句鼓励。
+/// 展示当前班次、本月和本年预估收入、工作状态和一句鼓励。
 @MainActor
 final class IncomeViewController: NSViewController {
     /// 主显示金额，使用等宽数字避免按秒刷新时跳动。
@@ -10,6 +10,8 @@ final class IncomeViewController: NSViewController {
     private let status = NSTextField(labelWithString: "尚未设置")
     /// 本班预估说明，兼顾收入含义和隐私状态。
     private let estimate = NSTextField(labelWithString: "本班预估")
+    /// 本月截至当前的预估金额，跨月班次只计本月区间。
+    private let monthAmount = NSTextField(labelWithString: "—")
     /// 本年累计预估金额，按当前工资和排班规则回算。
     private let yearAmount = NSTextField(labelWithString: "—")
     /// 本年累计金额的说明文字。
@@ -18,8 +20,14 @@ final class IncomeViewController: NSViewController {
     private let yearBasis = NSTextField(labelWithString: "按当前工资和排班回算")
     /// 可关闭的上班鼓励文案。
     private let quote = NSTextField(wrappingLabelWithString: "设置一下，看看时间值多少钱。")
-    /// 说明当前是否计薪，不显示额外数字。
-    private let activity = NSTextField(labelWithString: "等待设置")
+    /// 当前班次的金额、标题及说明作为整块控制显示。
+    private let currentSection = NSStackView()
+    /// 本月累计的金额与标题容器。
+    private let monthSection = NSStackView()
+    /// 本年累计的金额、标题与回算说明容器。
+    private let yearSection = NSStackView()
+    /// 收入面板主布局，用于根据可见内容计算紧凑高度。
+    private let contentStack = NSStackView()
     /// 隐藏工资的入口与可访问性描述。
     private let privacy = NSButton()
     /// 负责打开工资作息设置的操作。
@@ -29,7 +37,7 @@ final class IncomeViewController: NSViewController {
 
     /// 创建接近已评审原型的原生弹出面板。
     override func loadView() {
-        view = NSView(frame: NSRect(x: 0, y: 0, width: 360, height: 420))
+        view = NSView(frame: NSRect(x: 0, y: 0, width: 360, height: 480))
         let brand = NSTextField(labelWithString: "牛马上班")
         brand.font = .systemFont(ofSize: 13, weight: .medium)
         let icon = NSImageView(image: NSImage(systemSymbolName: "leaf", accessibilityDescription: nil)!)
@@ -51,6 +59,10 @@ final class IncomeViewController: NSViewController {
         status.textColor = .systemGreen
         estimate.font = .systemFont(ofSize: 11)
         estimate.textColor = .secondaryLabelColor
+        monthAmount.font = .monospacedDigitSystemFont(ofSize: 22, weight: .medium)
+        monthAmount.alignment = .center
+        monthAmount.lineBreakMode = .byTruncatingMiddle
+        monthAmount.setAccessibilityIdentifier("monthToDateIncome")
         yearAmount.font = .monospacedDigitSystemFont(ofSize: 22, weight: .medium)
         yearAmount.alignment = .center
         yearAmount.lineBreakMode = .byTruncatingMiddle
@@ -62,20 +74,27 @@ final class IncomeViewController: NSViewController {
         quote.font = .systemFont(ofSize: 12)
         quote.textColor = .secondaryLabelColor
         quote.alignment = .center
-        activity.font = .systemFont(ofSize: 11)
-        activity.textColor = .secondaryLabelColor
         let settings = NSButton(title: "设置", target: self, action: #selector(openSettings))
         settings.bezelStyle = .inline
         let quit = NSButton(title: "退出", target: NSApp, action: #selector(NSApplication.terminate(_:)))
         quit.bezelStyle = .inline
-        let footer = NSStackView(views: [activity, NSView(), settings, quit])
+        let footer = NSStackView(views: [NSView(), settings, quit])
         footer.orientation = .horizontal
         footer.spacing = 12
         let separator = NSBox()
         separator.boxType = .separator
-        let stack = NSStackView(views: [header, spacer(13), status, spacer(8), title, amount,
-                                      estimate, spacer(10), yearAmount, yearEstimate, yearBasis, spacer(14), quote,
-                                      spacer(12), separator, footer])
+        let monthTitle = NSTextField(labelWithString: "本月预估已赚")
+        monthTitle.font = .systemFont(ofSize: 11)
+        monthTitle.textColor = .secondaryLabelColor
+        configureSection(currentSection, views: [title, amount, estimate], identifier: "currentIncomeSection")
+        configureSection(monthSection, views: [monthAmount, monthTitle], identifier: "monthlyIncomeSection")
+        configureSection(yearSection, views: [yearAmount, yearEstimate, yearBasis], identifier: "yearlyIncomeSection")
+        let stack = contentStack
+        for child in [header, spacer(13), status, spacer(8), currentSection, monthSection, yearSection,
+                      spacer(14), quote, spacer(12), separator, footer] {
+            stack.addArrangedSubview(child)
+        }
+        stack.detachesHiddenViews = true
         stack.orientation = .vertical
         stack.alignment = .centerX
         stack.spacing = 7
@@ -89,33 +108,57 @@ final class IncomeViewController: NSViewController {
             header.widthAnchor.constraint(equalTo: stack.widthAnchor),
             footer.widthAnchor.constraint(equalTo: stack.widthAnchor),
             separator.widthAnchor.constraint(equalTo: stack.widthAnchor),
-            amount.widthAnchor.constraint(equalTo: stack.widthAnchor),
-            yearAmount.widthAnchor.constraint(equalTo: stack.widthAnchor),
+            currentSection.widthAnchor.constraint(equalTo: stack.widthAnchor),
+            monthSection.widthAnchor.constraint(equalTo: stack.widthAnchor),
+            yearSection.widthAnchor.constraint(equalTo: stack.widthAnchor),
+            amount.widthAnchor.constraint(equalTo: currentSection.widthAnchor),
+            yearAmount.widthAnchor.constraint(equalTo: yearSection.widthAnchor),
+            monthAmount.widthAnchor.constraint(equalTo: monthSection.widthAnchor),
             quote.widthAnchor.constraint(lessThanOrEqualTo: stack.widthAnchor)
         ])
     }
 
-    /// 同步展示当前和本年预估金额，两者共用隐私开关，错误时不展示旧金额。
+    /// 同步展示当前、本月和本年预估金额，共用隐私开关，错误时不展示旧金额。
     func render(_ snapshot: IncomeSnapshot, settings: WorkSettings?, error: String? = nil) {
         // 读取 view 会按需触发 loadView；loadViewIfNeeded() 需 macOS 14，故不直接调用。
         _ = view
         let hidden = settings?.hideAmounts == true
         amount.stringValue = hidden ? "••••" : Self.money(snapshot.amount)
         amount.font = .monospacedDigitSystemFont(ofSize: amount.stringValue.count > 13 ? 30 : 48, weight: .medium)
+        monthAmount.stringValue = hidden ? "••••" : Self.money(snapshot.monthToDateAmount)
+        monthAmount.font = .monospacedDigitSystemFont(ofSize: monthAmount.stringValue.count > 13 ? 18 : 22, weight: .medium)
         yearAmount.stringValue = hidden ? "••••" : Self.money(snapshot.yearToDateAmount)
         yearAmount.font = .monospacedDigitSystemFont(ofSize: yearAmount.stringValue.count > 13 ? 18 : 22, weight: .medium)
-        let labels: [WorkPhase: (String, String)] = [
-            .unconfigured: ("尚未设置", "等待设置"), .before: ("尚未上班", "等待上班时间"),
-            .working: ("上班中", "自动计算中"), .resting: ("休息中", "休息期间暂停计薪"),
-            .finished: ("本班已结束", "本班计算完成"), .off: ("休息日", "今天好好休息")
+        let labels: [WorkPhase: String] = [
+            .unconfigured: "尚未设置", .before: "尚未上班", .working: "上班中",
+            .resting: "休息中", .finished: "本班已结束", .off: "休息日"
         ]
-        status.stringValue = error == nil ? labels[snapshot.phase]!.0 : "需要检查设置"
-        activity.stringValue = error == nil ? labels[snapshot.phase]!.1 : "计算暂不可用"
+        status.stringValue = error == nil ? labels[snapshot.phase]! : "需要检查设置"
+        if error == nil, settings?.chinaHolidayEnabled == true,
+           let reason = snapshot.scheduleReason, ["节假日休息", "调休上班"].contains(reason) {
+            status.stringValue += " · " + reason
+        }
+        status.toolTip = snapshot.scheduleReason
+        currentSection.isHidden = settings?.showCurrentIncome == false
+        monthSection.isHidden = settings?.showMonthlyIncome == false
+        yearSection.isHidden = settings?.showYearlyIncome == false
         quote.stringValue = error ?? encouragement(for: snapshot)
         quote.isHidden = error == nil && settings?.encouragement == false
         privacy.toolTip = hidden ? "显示金额" : "隐藏金额"
         privacy.setAccessibilityLabel(hidden ? "显示金额" : "隐藏金额")
         privacy.image = NSImage(systemSymbolName: hidden ? "eye.slash" : "eye", accessibilityDescription: privacy.toolTip)
+        let size = NSSize(width: 360, height: max(180, contentStack.fittingSize.height + 34))
+        preferredContentSize = size
+        view.setFrameSize(size)
+    }
+
+    /// 将金额和说明组成可整体收起的区域，避免隐藏金额后留下对应标题和空白。
+    private func configureSection(_ section: NSStackView, views: [NSView], identifier: String) {
+        section.orientation = .vertical
+        section.alignment = .centerX
+        section.spacing = 7
+        section.setAccessibilityIdentifier(identifier)
+        for child in views { section.addArrangedSubview(child) }
     }
 
     /// 仅在展示边界舍入人民币金额，不改变内部计算精度。

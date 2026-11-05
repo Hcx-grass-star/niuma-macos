@@ -13,10 +13,14 @@ public struct IncomeSnapshot: Sendable {
     public let amount: Decimal?
     /// 从本年一月一日到当前时刻按现行配置回算的预估收入。
     public let yearToDateAmount: Decimal?
+    /// 从本月一日零点截至当前的计薪收入，跨月班仅计本月区间。
+    public let monthToDateAmount: Decimal?
     /// 内部鼓励节点依据，不向用户展示比例。
     public let progress: Double
     /// 下一次需要改变状态的时间，供停止秒级刷新时使用。
     public let nextBoundary: Date?
+    /// 当前班次或当天采用的排班依据，不包含工资信息。
+    public let scheduleReason: String?
 }
 
 /// 组合排班、工资和当前时间的收入计算服务。
@@ -30,28 +34,33 @@ public struct IncomeEngine: Sendable {
     /// 根据当前时刻生成收入快照，不保存计时器进度。
     public func evaluate(_ settings: WorkSettings?, at now: Date) throws -> IncomeSnapshot {
         guard let settings else {
-            return IncomeSnapshot(phase: .unconfigured, amount: nil, yearToDateAmount: nil, progress: 0, nextBoundary: nil)
+            return IncomeSnapshot(phase: .unconfigured, amount: nil, yearToDateAmount: nil, monthToDateAmount: nil, progress: 0, nextBoundary: nil, scheduleReason: nil)
         }
         try settings.validate()
-        let yearToDate = try yearToDateAmount(for: settings, through: now)
+        let yearToDate = try accruedAmount(for: settings, from: calendar.dateInterval(of: .year, for: now)!.start, through: now)
+        let monthToDate = try accruedAmount(for: settings, from: calendar.dateInterval(of: .month, for: now)!.start, through: now)
         let today = calendar.startOfDay(for: now)
         let yesterday = calendar.date(byAdding: .day, value: -1, to: today)!
         let previous = try shift(on: yesterday, settings: settings)
         let current = try shift(on: today, settings: settings)
         let active = previous.flatMap { now >= $0.start && now < $0.end ? $0 : nil } ?? current
         // 年度金额需要在元旦零点刷新，即使下一班尚未开始。
-        var boundaries: [Date] = [calendar.dateInterval(of: .year, for: now)!.end]
+        var boundaries: [Date] = [calendar.dateInterval(of: .month, for: now)!.end]
         if let active { boundaries += [active.start, active.end] + active.rests.flatMap { [$0.start, $0.end] } }
-        for offset in 0...7 {
-            let day = calendar.date(byAdding: .day, value: offset, to: today)!
-            if settings.weekdays.contains(calendar.component(.weekday, from: day)) {
+        var nextDay = today
+        let monthEnd = calendar.dateInterval(of: .month, for: now)!.end
+        while nextDay < monthEnd {
+            let day = nextDay
+            nextDay = calendar.date(byAdding: .day, value: 1, to: day)!
+            if isScheduledDate(on: day, settings: settings) {
                 let start = try localDate(on: day, minute: settings.startMinute)
                 if start > now { boundaries.append(start); break }
             }
         }
         let next = boundaries.filter { $0 > now }.min()
         guard let active else {
-            return IncomeSnapshot(phase: .off, amount: nil, yearToDateAmount: yearToDate, progress: 0, nextBoundary: next)
+            return IncomeSnapshot(phase: .off, amount: nil, yearToDateAmount: yearToDate, monthToDateAmount: monthToDate, progress: 0, nextBoundary: next,
+                                  scheduleReason: ChinaHolidayCalendar.reason(on: today, settings: settings, calendar: calendar))
         }
         let phase: WorkPhase
         if now < active.start { phase = .before }
@@ -67,13 +76,14 @@ public struct IncomeEngine: Sendable {
         let daily = try dailyIncome(for: active.start, settings: settings)
         guard !daily.isNaN else { throw SettingsError.invalidDivisor }
         let fraction = Decimal(elapsed) / Decimal(duration)
-        return IncomeSnapshot(phase: phase, amount: daily * fraction, yearToDateAmount: yearToDate,
-                              progress: elapsed / duration, nextBoundary: next)
+        let scheduleDate = calendar.startOfDay(for: active.start)
+        return IncomeSnapshot(phase: phase, amount: daily * fraction, yearToDateAmount: yearToDate, monthToDateAmount: monthToDate,
+                              progress: elapsed / duration, nextBoundary: next,
+                              scheduleReason: ChinaHolidayCalendar.reason(on: scheduleDate, settings: settings, calendar: calendar))
     }
 
-    /// 已结束班次按月汇总，仅展开年初跨年班和最近两天，避免逐秒重建全年班次。
-    private func yearToDateAmount(for settings: WorkSettings, through now: Date) throws -> Decimal {
-        let yearStart = calendar.dateInterval(of: .year, for: now)!.start
+    /// 按月汇总完整班次，区间起点之前的跨夜班和最近两天按实际计薪部分截断。
+    private func accruedAmount(for settings: WorkSettings, from yearStart: Date, through now: Date) throws -> Decimal {
         let today = calendar.startOfDay(for: now)
         let yesterday = calendar.date(byAdding: .day, value: -1, to: today)!
         var total = Decimal.zero
@@ -119,19 +129,21 @@ public struct IncomeEngine: Sendable {
         return settings.salary! / divisor
     }
 
-    /// 统计班次开始月份的排班日期数量，不推测节假日。
+    /// 统计班次开始月份的排班日期数量，应用已开启的年度安排覆盖。
     public func workdays(in date: Date, settings: WorkSettings) -> Int {
         let month = calendar.dateInterval(of: .month, for: date)!
         let count = calendar.range(of: .day, in: .month, for: date)!.count
         return scheduledDays(from: month.start, count: count, settings: settings)
     }
 
-    /// 完整周直接计数，只检查不足一周的余数，保持每次年度回算成本固定。
+    /// 按日期统计月份中的有效班次，使全国安排覆盖和缺失年份回退保持一致。
     private func scheduledDays(from start: Date, count: Int, settings: WorkSettings) -> Int {
-        let weekday = calendar.component(.weekday, from: start)
-        return (0..<(count % 7)).reduce(count / 7 * settings.weekdays.count) { result, offset in
-            result + (settings.weekdays.contains((weekday - 1 + offset) % 7 + 1) ? 1 : 0)
+        var total = 0
+        for offset in 0..<count {
+            let day = calendar.date(byAdding: .day, value: offset, to: start)!
+            if isScheduledDate(on: day, settings: settings) { total += 1 }
         }
+        return total
     }
 
     /// 班次使用实际经过的时间，防止夏令时按固定秒数偏移。
@@ -146,13 +158,21 @@ public struct IncomeEngine: Sendable {
 
     /// 将一个排班日期转换为实际班次，非工作日不创建班次。
     private func shift(on day: Date, settings: WorkSettings) throws -> Shift? {
-        guard settings.weekdays.contains(calendar.component(.weekday, from: day)) else { return nil }
+        guard isScheduledDate(on: day, settings: settings) else { return nil }
         let endMinute = settings.endMinute > settings.startMinute ? settings.endMinute : settings.endMinute + 1440
         let intervals = try settings.normalizedRests().map {
             try DateInterval(start: localDate(on: day, minute: $0.lowerBound), end: localDate(on: day, minute: $0.upperBound))
         }
         return try Shift(start: localDate(on: day, minute: settings.startMinute),
                          end: localDate(on: day, minute: endMinute), rests: intervals)
+    }
+
+    /// 判断日期是否创建班次；全国安排覆盖每周排班，缺失年份回退每周排班。
+    private func isScheduledDate(on day: Date, settings: WorkSettings) -> Bool {
+        if settings.chinaHolidayEnabled, let holiday = ChinaHolidayCalendar.day(on: day, calendar: calendar) {
+            return holiday.kind == "makeup"
+        }
+        return settings.weekdays.contains(calendar.component(.weekday, from: day))
     }
 
     /// 严格解析本地时刻，拒绝夏令时造成的不存在或重复时间。
