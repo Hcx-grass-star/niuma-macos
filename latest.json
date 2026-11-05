@@ -1,7 +1,7 @@
 {
-  "version": "0.3.0",
-  "notes": "本次更新新增应用内安装更新，以及手动打开新版时自动替换、回收旧版本。\n\n- 原生 macOS：Sparkle 下载与签名校验，原位覆盖并重启。\n- Tauri：签名更新、下载进度、失败重试和手动下载入口；Windows 沿用正式安装器升级。\n- 手动打开新版 macOS 包时自动归位到“应用程序”；确认应用完成初始化后才把旧包移到废纸篓，启动失败恢复旧版。\n- 保留工资、排班和已有托盘收入功能；两种 macOS 实现不互相转换配置格式。\n\n**首次从 0.2.x 升级：** Mac 用户下载 `niuma-0.3.0-macOS-universal.zip`，解压后打开其中的应用；Windows 推荐下载 `niuma-0.3.0-Windows-x64-setup.exe` 并安装。以后可在“设置 → 应用更新”点击“安装更新”。\n\n`tauri-niuma-0.3.0-macOS-aarch64.app.tar.gz` 是 Tauri Apple Silicon 版本及其更新包；Intel Mac 使用原生 universal ZIP。macOS 首次打开可能需要在“系统设置 → 隐私与安全性”批准，当前未进行 Apple 公证。\n\n已验证：两种 macOS 实际进程的手动覆盖与崩溃回滚、原生 Sparkle 有效签名安装/篡改拒绝、Windows runner 0.2.1→0.3.0 NSIS实际覆盖（同目录、单卸载项、保留配置哨兵）、收入回归。MSI实际安装、Windows应用内完整重启、Intel及其他macOS版本仍待对应环境验收。\n",
-  "url": "https://github.com/Hcx-grass-star/niuma-macos/releases/tag/v0.3.0",
-  "macos": "https://github.com/Hcx-grass-star/niuma-macos/releases/download/v0.3.0/niuma-0.3.0-macOS-universal.zip",
-  "windows": "https://github.com/Hcx-grass-star/niuma-macos/releases/download/v0.3.0/niuma-0.3.0-Windows-x64-setup.exe"
+  "version": "0.3.1",
+  "notes": "本次更新完善收入面板与菜单栏展示，并加入中国节假日与调休规则支持。\n\n- 新增本月预估已赚，当前班次、本月和本年金额共用同一套计薪规则。\n- 收入面板可分别显示或隐藏当前、本月、本年金额；金额隐藏会同步遮蔽所有入口。\n- 菜单栏支持仅图标、当前班次已赚和本月预估已赚，原生版可右键切换。\n- 新增中国节假日与调休数据、跨平台同步资源和缺失年份提示。\n- Windows 增加桌面宠物及显示配置；macOS 保持原生菜单栏体验。\n- 保留 0.3.0 的签名更新、安装替换和旧版本清理能力。\n\n已验证：Node 核心与更新检查、Swift 13 组集成、Swift/JS 24 组跨运行时对照、安装事务、Sparkle 签名安装、macOS 通用包签名，以及 GitHub Windows runner 的 NSIS 0.2.1→0.3.1 升级验收。macOS 分发包使用临时签名，首次打开可能需要在系统设置中批准；未进行 Apple 公证。Windows MSI 未在真实 Windows 机器上做独立交互验收。\n",
+  "url": "https://github.com/Hcx-grass-star/niuma-macos/releases/tag/v0.3.1",
+  "macos": "https://github.com/Hcx-grass-star/niuma-macos/releases/download/v0.3.1/niuma-0.3.1-macOS-universal.zip",
+  "windows": "https://github.com/Hcx-grass-star/niuma-macos/releases/download/v0.3.1/niuma-0.3.1-Windows-x64-setup.exe"
 }
