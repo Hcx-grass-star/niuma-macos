@@ -1,14 +1,15 @@
 {
   "name": "niuma-cross-platform",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.2.1",
   "type": "module",
   "scripts": {
     "test:core": "node shared/income-engine.test.mjs",
     "test:updates": "node scripts/test-updates.mjs",
     "sync:frontend": "node scripts/sync-frontend-core.mjs",
     "tauri:dev": "npm run sync:frontend && tauri dev",
-    "tauri:build": "npm run sync:frontend && tauri build"
+    "tauri:build": "npm run sync:frontend && tauri build",
+    "publish:updates": "node scripts/publish-updates.mjs"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.9.5"
