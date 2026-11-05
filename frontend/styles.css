@@ -17,6 +17,15 @@ body { margin: 0; min-width: 320px; }
 .amount { margin: 6px 0; font-size: 50px; font-variant-numeric: tabular-nums; letter-spacing: -2px; }
 .year-total { margin-top: 12px; }
 .year-amount { margin: 4px 0; font-size: 22px; font-variant-numeric: tabular-nums; }
+.year-basis { margin-top: 6px; font-size: 11px; }
+.settings-note { margin: 0 18px 12px; color: #718078; font-size: 11px; }
+.updates { margin: 18px; padding: 14px 0; border-top: 1px solid #dbe4dd; font-size: 12px; }
+.updates p { color: #718078; font-size: 11px; line-height: 1.6; }
+.updates label { margin: 12px 0; }
+.updates button, .update-banner button { padding: 7px 8px; border: 1px solid #718078; border-radius: 6px; }
+.updates button:disabled { opacity: 0.5; cursor: default; }
+.updates pre { max-height: 140px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-family: inherit; font-size: 11px; }
+.update-banner { margin: 0 18px 18px; display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 11px; }
 .quote { min-height: 22px; margin: 0 24px 24px; color: #718078; text-align: center; font-size: 12px; }
 footer { justify-content: space-between; border-top: 1px solid #dbe4dd; padding: 10px 16px; color: #718078; font-size: 11px; }
 button { border: 0; background: transparent; color: inherit; cursor: pointer; }

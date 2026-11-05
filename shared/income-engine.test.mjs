@@ -15,6 +15,31 @@ function localDate(day, hour, minute = 0) {
   return new Date(2026, 10, day, hour, minute, 0, 0);
 }
 
+/** 以显示精度比较年度金额，覆盖计算误差之外的业务边界。 */
+function annualAmount(config, now) {
+  return Number(evaluateIncome(config, now).yearToDateAmount?.toFixed(2));
+}
+
+/** 验证年初截断、跨年休息、闰年、月薪折算与修改配置后的回算。 */
+function testAnnualBoundaries() {
+  const daily = settings({ mode: 'daily', salary: 800 });
+  for (const [hour, minute, expected] of [[0, 0, 0], [12, 0, 300], [12, 30, 300], [18, 0, 800]]) {
+    assert.equal(annualAmount(daily, new Date(2026, 0, 1, hour, minute)), expected);
+  }
+  const everyDay = settings({ weekdays: [0, 1, 2, 3, 4, 5, 6], salary: 31000 });
+  assert.equal(annualAmount(everyDay, new Date(2026, 1, 1, 14)), 31553.57);
+  assert.equal(annualAmount({ ...everyDay, mode: 'daily', salary: 800 }, new Date(2024, 2, 1, 9)), 48000);
+  const overnight = { ...everyDay, start: '22:00', end: '06:00', rests: [] };
+  assert.equal(annualAmount(overnight, new Date(2026, 0, 1)), 0);
+  const snapshot = evaluateIncome(overnight, new Date(2026, 0, 1, 2));
+  assert.equal(snapshot.amount, 500);
+  assert.equal(snapshot.yearToDateAmount, 250);
+  assert.equal(annualAmount({ ...overnight, rests: [{ start: '00:00', end: '01:00' }] }, new Date(2026, 0, 1, 0, 30)), 0);
+  assert.equal(annualAmount(settings({ salary: 22000, divisor: 'fixed' }), new Date(2026, 0, 2, 14)), 1500);
+  assert.equal(annualAmount(settings({ salary: 42000 }), localDate(4, 14)), 425000);
+  assert.equal(evaluateIncome(null).yearToDateAmount, null);
+}
+
 /** 验证核心计算在 Tauri 前端和 macOS 迁移前保持可重复。 */
 function run() {
   assert.equal(evaluateIncome(settings(), localDate(4, 12)).phase, 'resting');
@@ -29,6 +54,7 @@ function run() {
   assert.equal(Math.round(offDay.yearToDateAmount * 100) / 100, 215000);
   assert.throws(() => validateSettings(settings({ weekdays: [] })), /至少选择一个工作日/);
   assert.throws(() => normalizedSchedule(settings({ rests: [{ start: '08:00', end: '09:30' }] })), /位于班次内/);
+  testAnnualBoundaries();
   console.log('跨平台收入核心测试通过。');
 }
 

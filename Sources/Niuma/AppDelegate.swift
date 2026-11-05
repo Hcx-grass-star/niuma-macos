@@ -24,6 +24,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     private var refreshTimer: Timer?
     /// 读取配置失败时保留错误，不静默生成示例工资。
     private var configurationError: String?
+    /// 独立于工资计算的公开版本检查和检查偏好。
+    private let updates = UpdateController()
 
     /// 加载本地配置并创建菜单栏，只有首次使用才打开设置。
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -39,7 +41,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         configureMainMenu()
         popover.behavior = .transient
         popover.animates = false
-        popover.contentSize = NSSize(width: 360, height: 330)
+        popover.contentSize = NSSize(width: 360, height: 420)
         popover.delegate = self
         NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(environmentChanged),
                                                          name: NSWorkspace.didWakeNotification, object: nil)
@@ -49,10 +51,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
                                                name: .NSSystemClockDidChange, object: nil)
         refresh()
         if settings == nil { showSettings() }
+        updates.start()
     }
 
     /// 退出时释放定时任务和观察者，不保留独立后台进程。
     func applicationWillTerminate(_ notification: Notification) {
+        updates.stop()
         refreshTimer?.invalidate()
         NSWorkspace.shared.notificationCenter.removeObserver(self)
         NotificationCenter.default.removeObserver(self)
@@ -126,7 +130,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     }
 
     /// 唤醒、时区或系统时间变化时直接重新估算，不追赶计时器事件。
-    @objc private func environmentChanged(_ notification: Notification) { refresh() }
+    @objc private func environmentChanged(_ notification: Notification) { refresh(); updates.check(manual: false) }
 
     /// 成功写入后才发布隐私偏好，失败时给出可见错误。
     private func togglePrivacy() {
@@ -154,6 +158,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
                           userInfo: [NSLocalizedDescriptionKey: "登录启动尚未关闭，未清除工资设置。请检查系统设置后重试。"])
         }
         try store.clear()
+        updates.reset()
         settings = nil
         configurationError = nil
         settingsWindow = nil
@@ -161,20 +166,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         DispatchQueue.main.async { [weak self] in self?.showSettings() }
     }
 
-    /// 复用已经打开的设置页；重新打开时使用最新保存的配置。
+    /// 复用设置页及未保存草稿；用户打开时显式激活并前置窗口，避免被其他应用遮挡。
     private func showSettings() {
         popover.performClose(nil)
         if settingsWindow?.window?.isVisible != true {
-            settingsWindow = SettingsWindowController(settings: settings ?? WorkSettings(), dataPath: store.fileURL.path,
+            settingsWindow = SettingsWindowController(settings: settings ?? WorkSettings(), dataPath: store.fileURL.path, updates: updates,
                                                        onSave: { [weak self] value in
                                                            try self?.save(value)
                                                            DispatchQueue.main.async { [weak self] in self?.togglePopover() }
                                                        },
                                                        onReset: { [weak self] in try self?.reset() })
-            settingsWindow?.onClose = { [weak self] in self?.settingsWindow = nil }
+            settingsWindow?.onClose = { [weak self] in self?.updates.onChange = nil; self?.settingsWindow = nil }
         }
         settingsWindow?.showWindow(nil)
-        activateApplication()
+        // 设置入口需要主动取得焦点；普通 activate() 的协作请求可能被当前前台应用拒绝。
+        NSApp.activate(ignoringOtherApps: true)
+        settingsWindow?.window?.makeKeyAndOrderFront(nil)
+        settingsWindow?.window?.orderFrontRegardless()
         if let configurationError { showAlert(configurationError) }
     }
 
@@ -189,6 +197,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         let settings = NSMenuItem(title: "设置…", action: #selector(openSettingsFromMenu), keyEquivalent: ",")
         settings.target = self
         commands.addItem(settings)
+        let update = NSMenuItem(title: "检查更新…", action: #selector(checkUpdates), keyEquivalent: "")
+        update.target = self
+        commands.addItem(update)
         commands.addItem(.separator())
         commands.addItem(NSMenuItem(title: "退出牛马上班", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
         root.submenu = commands
@@ -198,6 +209,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
 
     /// 将标准设置快捷键连接到现有窗口生命周期。
     @objc private func openSettingsFromMenu() { showSettings() }
+
+    /// 菜单栏应用激活时允许通过标准菜单手动检查版本。
+    @objc private func checkUpdates() { updates.check(manual: true) }
 
     /// 用原生提示明确说明配置错误，不把敏感配置写到日志。
     private func showAlert(_ message: String) {

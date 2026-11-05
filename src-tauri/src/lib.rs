@@ -13,7 +13,7 @@ pub fn run() {
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None,
         ))
-        .invoke_handler(tauri::generate_handler![set_autostart, autostart_enabled])
+        .invoke_handler(tauri::generate_handler![set_autostart, autostart_enabled, update_environment, open_release_page])
         .setup(|app| {
             let show = MenuItem::with_id(app, "show", "查看当前收入", true, None::<&str>)?;
             let settings = MenuItem::with_id(app, "settings", "打开设置", true, None::<&str>)?;
@@ -63,6 +63,29 @@ fn set_autostart(app: AppHandle, enabled: bool) -> Result<(), String> {
 #[tauri::command]
 fn autostart_enabled(app: AppHandle) -> Result<bool, String> {
     app.autolaunch().is_enabled().map_err(|error| error.to_string())
+}
+
+/// 从正式应用包返回真实版本与操作系统，避免前端硬编码版本导致重复提示。
+#[tauri::command]
+fn update_environment(app: AppHandle) -> (String, String) {
+    (app.package_info().version.to_string(), std::env::consts::OS.to_string())
+}
+
+/// 只允许打开本仓库正式版本页；参数按独立进程参数传递，不经过 shell。
+#[tauri::command]
+fn open_release_page(url: String) -> Result<(), String> {
+    let prefix = "https://github.com/Hcx-grass-star/niuma-macos/releases/tag/";
+    let tag = url.strip_prefix(prefix).ok_or("无效的发布页面")?;
+    if tag.is_empty() || !tag.bytes().all(|byte| byte.is_ascii_digit() || byte == b'.' || byte == b'v') {
+        return Err("无效的发布页面".into());
+    }
+    #[cfg(target_os = "macos")]
+    let result = std::process::Command::new("open").arg(&url).spawn();
+    #[cfg(target_os = "windows")]
+    let result = std::process::Command::new("rundll32.exe").args(["url.dll,FileProtocolHandler", &url]).spawn();
+    #[cfg(target_os = "linux")]
+    let result = std::process::Command::new("xdg-open").arg(&url).spawn();
+    result.map(|_| ()).map_err(|_| "无法打开下载页面，请重试。".into())
 }
 
 /// 将托盘菜单动作映射到窗口显示、设置页和应用退出。
