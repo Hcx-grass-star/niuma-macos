@@ -166,7 +166,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         DispatchQueue.main.async { [weak self] in self?.showSettings() }
     }
 
-    /// 复用已经打开的设置页；重新打开时使用最新保存的配置。
+    /// 复用设置页及未保存草稿；用户打开时显式激活并前置窗口，避免被其他应用遮挡。
     private func showSettings() {
         popover.performClose(nil)
         if settingsWindow?.window?.isVisible != true {
@@ -179,7 +179,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             settingsWindow?.onClose = { [weak self] in self?.updates.onChange = nil; self?.settingsWindow = nil }
         }
         settingsWindow?.showWindow(nil)
-        activateApplication()
+        // 设置入口需要主动取得焦点；普通 activate() 的协作请求可能被当前前台应用拒绝。
+        NSApp.activate(ignoringOtherApps: true)
+        settingsWindow?.window?.makeKeyAndOrderFront(nil)
+        settingsWindow?.window?.orderFrontRegardless()
         if let configurationError { showAlert(configurationError) }
     }
 

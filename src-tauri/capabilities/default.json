@@ -3,5 +3,11 @@
   "identifier": "default",
   "description": "牛马上班默认桌面能力",
   "windows": ["main"],
-  "permissions": ["core:default", "autostart:default"]
+  "permissions": [
+    "core:default",
+    "core:window:allow-close",
+    "core:window:allow-minimize",
+    "core:window:allow-start-dragging",
+    "autostart:default"
+  ]
 }

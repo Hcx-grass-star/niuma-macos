@@ -1,9 +1,15 @@
 use tauri::{
     menu::{MenuBuilder, MenuItem},
     tray::{MouseButton, TrayIconBuilder, TrayIconEvent},
-    AppHandle, Emitter, Manager, WindowEvent,
+    AppHandle, Emitter, Manager, State, WindowEvent,
 };
 use tauri_plugin_autostart::ManagerExt;
+
+/// 保存可动态更新的托盘收入菜单项，避免每秒重建整份原生菜单。
+struct TrayIncomeState {
+    /// 托盘菜单首项，仅展示当前收入，不响应点击。
+    item: MenuItem<tauri::Wry>,
+}
 
 /// 初始化跨平台窗口、系统托盘和自动启动能力。
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -13,18 +19,28 @@ pub fn run() {
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None,
         ))
-        .invoke_handler(tauri::generate_handler![set_autostart, autostart_enabled])
+        .invoke_handler(tauri::generate_handler![
+            set_autostart,
+            autostart_enabled,
+            update_tray_income,
+            update_environment,
+            open_release_page
+        ])
         .setup(|app| {
+            let income = MenuItem::with_id(app, "income", "当前收入：未显示", false, None::<&str>)?;
             let show = MenuItem::with_id(app, "show", "查看当前收入", true, None::<&str>)?;
             let settings = MenuItem::with_id(app, "settings", "打开设置", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "退出牛马上班", true, None::<&str>)?;
             let menu = MenuBuilder::new(app)
+                .item(&income)
+                .separator()
                 .item(&show)
                 .item(&settings)
                 .separator()
                 .item(&quit)
                 .build()?;
-            TrayIconBuilder::new()
+            let tray = TrayIconBuilder::with_id("main")
+                .icon(app.default_window_icon().expect("应用图标缺失").clone())
                 .menu(&menu)
                 .show_menu_on_left_click(false)
                 .on_menu_event(|app, event| handle_menu_event(app, event.id.as_ref()))
@@ -34,6 +50,8 @@ pub fn run() {
                     }
                 })
                 .build(app)?;
+            tray.set_tooltip(Some("牛马上班 · 点击查看当前收入"))?;
+            app.manage(TrayIncomeState { item: income });
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.set_title("牛马上班");
             }
@@ -63,6 +81,47 @@ fn set_autostart(app: AppHandle, enabled: bool) -> Result<(), String> {
 #[tauri::command]
 fn autostart_enabled(app: AppHandle) -> Result<bool, String> {
     app.autolaunch().is_enabled().map_err(|error| error.to_string())
+}
+
+/// 同步托盘悬停提示和只读菜单项；金额文本由前端同一收入快照格式化。
+#[tauri::command]
+fn update_tray_income(
+    app: AppHandle,
+    state: State<'_, TrayIncomeState>,
+    enabled: bool,
+    text: String,
+) -> Result<(), String> {
+    let (menu_text, tooltip) = if enabled {
+        (format!("当前已赚：{text}"), format!("牛马上班 · 当前已赚 {text}"))
+    } else {
+        ("当前收入：未显示".into(), "牛马上班 · 点击查看当前收入".into())
+    };
+    state.item.set_text(menu_text).map_err(|error| error.to_string())?;
+    let tray = app.tray_by_id("main").ok_or("托盘图标尚未就绪")?;
+    tray.set_tooltip(Some(tooltip)).map_err(|error| error.to_string())
+}
+
+/// 从正式应用包返回真实版本与操作系统，避免前端硬编码版本导致重复提示。
+#[tauri::command]
+fn update_environment(app: AppHandle) -> (String, String) {
+    (app.package_info().version.to_string(), std::env::consts::OS.to_string())
+}
+
+/// 只允许打开本仓库正式版本页；参数按独立进程参数传递，不经过 shell。
+#[tauri::command]
+fn open_release_page(url: String) -> Result<(), String> {
+    let prefix = "https://github.com/Hcx-grass-star/niuma-macos/releases/tag/";
+    let tag = url.strip_prefix(prefix).ok_or("无效的发布页面")?;
+    if tag.is_empty() || !tag.bytes().all(|byte| byte.is_ascii_digit() || byte == b'.' || byte == b'v') {
+        return Err("无效的发布页面".into());
+    }
+    #[cfg(target_os = "macos")]
+    let result = std::process::Command::new("open").arg(&url).spawn();
+    #[cfg(target_os = "windows")]
+    let result = std::process::Command::new("rundll32.exe").args(["url.dll,FileProtocolHandler", &url]).spawn();
+    #[cfg(target_os = "linux")]
+    let result = std::process::Command::new("xdg-open").arg(&url).spawn();
+    result.map(|_| ()).map_err(|_| "无法打开下载页面，请重试。".into())
 }
 
 /// 将托盘菜单动作映射到窗口显示、设置页和应用退出。
