@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle"><channel><title>牛马上班</title><link>https://github.com/Hcx-grass-star/niuma-macos/releases/tag/v0.3.0</link><item><title>0.3.0</title><description sparkle:format="plain-text"><![CDATA[本次更新新增应用内安装更新，以及手动打开新版时自动替换、回收旧版本。
+
+- 原生 macOS：Sparkle 下载与签名校验，原位覆盖并重启。
+- Tauri：签名更新、下载进度、失败重试和手动下载入口；Windows 沿用正式安装器升级。
+- 手动打开新版 macOS 包时自动归位到“应用程序”；确认应用完成初始化后才把旧包移到废纸篓，启动失败恢复旧版。
+- 保留工资、排班和已有托盘收入功能；两种 macOS 实现不互相转换配置格式。
+
+**首次从 0.2.x 升级：** Mac 用户下载 `niuma-0.3.0-macOS-universal.zip`，解压后打开其中的应用；Windows 推荐下载 `niuma-0.3.0-Windows-x64-setup.exe` 并安装。以后可在“设置 → 应用更新”点击“安装更新”。
+
+`tauri-niuma-0.3.0-macOS-aarch64.app.tar.gz` 是 Tauri Apple Silicon 版本及其更新包；Intel Mac 使用原生 universal ZIP。macOS 首次打开可能需要在“系统设置 → 隐私与安全性”批准，当前未进行 Apple 公证。
+
+已验证：两种 macOS 实际进程的手动覆盖与崩溃回滚、原生 Sparkle 有效签名安装/篡改拒绝、Windows runner 0.2.1→0.3.0 NSIS实际覆盖（同目录、单卸载项、保留配置哨兵）、收入回归。MSI实际安装、Windows应用内完整重启、Intel及其他macOS版本仍待对应环境验收。
+]]></description><pubDate>Thu, 05 Nov 2026 09:19:32 GMT</pubDate><sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion><enclosure url="https://github.com/Hcx-grass-star/niuma-macos/releases/download/v0.3.0/niuma-0.3.0-macOS-universal.zip" sparkle:version="4" sparkle:shortVersionString="0.3.0" length="3571738" type="application/octet-stream" sparkle:edSignature="wbOuL8f5s4zAnKEPyW6EEu0+SEtPp2znuXC0nqa7eKTpdxYp3s9K2qFf7zTQyzrIvKu4IKo5kogldUbMNTGEAA=="/></item></channel></rss>

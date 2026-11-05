@@ -1,0 +1,23 @@
+{
+  "version": "0.3.0",
+  "notes": "本次更新新增应用内安装更新，以及手动打开新版时自动替换、回收旧版本。\n\n- 原生 macOS：Sparkle 下载与签名校验，原位覆盖并重启。\n- Tauri：签名更新、下载进度、失败重试和手动下载入口；Windows 沿用正式安装器升级。\n- 手动打开新版 macOS 包时自动归位到“应用程序”；确认应用完成初始化后才把旧包移到废纸篓，启动失败恢复旧版。\n- 保留工资、排班和已有托盘收入功能；两种 macOS 实现不互相转换配置格式。\n\n**首次从 0.2.x 升级：** Mac 用户下载 `niuma-0.3.0-macOS-universal.zip`，解压后打开其中的应用；Windows 推荐下载 `niuma-0.3.0-Windows-x64-setup.exe` 并安装。以后可在“设置 → 应用更新”点击“安装更新”。\n\n`tauri-niuma-0.3.0-macOS-aarch64.app.tar.gz` 是 Tauri Apple Silicon 版本及其更新包；Intel Mac 使用原生 universal ZIP。macOS 首次打开可能需要在“系统设置 → 隐私与安全性”批准，当前未进行 Apple 公证。\n\n已验证：两种 macOS 实际进程的手动覆盖与崩溃回滚、原生 Sparkle 有效签名安装/篡改拒绝、Windows runner 0.2.1→0.3.0 NSIS实际覆盖（同目录、单卸载项、保留配置哨兵）、收入回归。MSI实际安装、Windows应用内完整重启、Intel及其他macOS版本仍待对应环境验收。\n",
+  "pub_date": "2026-11-05T09:19:32Z",
+  "platforms": {
+    "windows-x86_64-nsis": {
+      "url": "https://github.com/Hcx-grass-star/niuma-macos/releases/download/v0.3.0/niuma-0.3.0-Windows-x64-setup.exe",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVScXN2Qm9wZG9oSUFqcitWL1ZFcitVbFN4VWh0ZFlIOGwxTm4xTGZsM2hvMXN0VFFNTTV4eHc3K2VOK1ZRd2tZQmRydlRQNFo5RXBkZjNKeHEzU3Z3dlhoTnhkREtGL2djPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzODcwMjM2CWZpbGU6bml1bWEtMC4zLjAtV2luZG93cy14NjQtc2V0dXAuZXhlCXZlcnNpb246MC4zLjAKWno3Q21yekNLWk5WWU1SMGFuUGQycnZoeTRIQkwxVU05c1F3TFZLbGFPdGdYSDZFbm1RNlNuczB0OUtxSUlIVWZoLzZPL0JWZm4xdkdQUmU3Wk1KQ0E9PQo="
+    },
+    "windows-x86_64": {
+      "url": "https://github.com/Hcx-grass-star/niuma-macos/releases/download/v0.3.0/niuma-0.3.0-Windows-x64-setup.exe",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVScXN2Qm9wZG9oSUFqcitWL1ZFcitVbFN4VWh0ZFlIOGwxTm4xTGZsM2hvMXN0VFFNTTV4eHc3K2VOK1ZRd2tZQmRydlRQNFo5RXBkZjNKeHEzU3Z3dlhoTnhkREtGL2djPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzODcwMjM2CWZpbGU6bml1bWEtMC4zLjAtV2luZG93cy14NjQtc2V0dXAuZXhlCXZlcnNpb246MC4zLjAKWno3Q21yekNLWk5WWU1SMGFuUGQycnZoeTRIQkwxVU05c1F3TFZLbGFPdGdYSDZFbm1RNlNuczB0OUtxSUlIVWZoLzZPL0JWZm4xdkdQUmU3Wk1KQ0E9PQo="
+    },
+    "windows-x86_64-msi": {
+      "url": "https://github.com/Hcx-grass-star/niuma-macos/releases/download/v0.3.0/niuma-0.3.0-Windows-x64.msi",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVScXN2Qm9wZG9oSUlhclVhWFdnZytPdlkwVEtWcVJJR0RPWDE1YUg3WStWWllBNWcxL1ZldkRTeFhPdjZPc1N2L09NeWFSWDRvb3BnWTdnTU5ueXNCUWp4VkRYOEFUZ0E0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzODcwMjM2CWZpbGU6bml1bWEtMC4zLjAtV2luZG93cy14NjQubXNpCXZlcnNpb246MC4zLjAKNkVVekc4TzlQdCtQTWp1L1Vnd004L0Uyc1h6dUhOQ3c4SWZjaUJheEg2VWlTQktQNVRhOEJxMXVxWVJ3M244RzJYeERZalp1a2xnYm5HT2FFcFdxQ0E9PQo="
+    },
+    "darwin-aarch64": {
+      "url": "https://github.com/Hcx-grass-star/niuma-macos/releases/download/v0.3.0/tauri-niuma-0.3.0-macOS-aarch64.app.tar.gz",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVScXN2Qm9wZG9oSUlIUmllblkwN21PdWZUUTJUSmI1RXkrOEFUSFVKWmN3Ri90TG5ZMjZhSENzTVoyb0tvY29kS296bDZHSm9HNFc4eXJid2xwRU5nWDVienRMSFFEOUFzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzODY5ODYzCWZpbGU6dGF1cmktbml1bWEtMC4zLjAtbWFjT1MtYWFyY2g2NC5hcHAudGFyLmd6CXZlcnNpb246MC4zLjAKRU5CNUVVdStBdnc5UU9rL0FDSTBQVTkxajgwT3F6MDZoeHBKMUVRVFBmQlUrTytVTlFHUEJ1dGhJd2xweUc1bXhmVEN4Rk5ubnlrYVY2NGNUV29ORGc9PQo="
+    }
+  }
+}

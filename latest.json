@@ -1,7 +1,7 @@
 {
-  "version": "0.2.2",
-  "notes": "牛马上班 0.2.2 统一发布 macOS 与 Windows 版本。\n\n主要变化：\n\n- 新增本年预估已赚，并与当前收入共用隐私隐藏状态。\n- 更新检查改为静态清单优先、GitHub API 备用，降低匿名 API 限流影响。\n- Windows 版优化首页和设置布局，增加无边框窗口、窗口拖动、最小化与关闭到托盘。\n- Windows 托盘支持悬停和菜单显示当前收入，并修复托盘图标空白。\n- 修复 macOS 从其他应用打开设置时窗口未可靠前置的问题。\n\n安装说明：\n\n- macOS：下载 universal ZIP，解压后先退出旧版，再替换“应用程序”中的牛马上班.app。该包为 ad-hoc 临时签名，首次打开需按包内说明放行。\n- Windows：先从旧版托盘菜单选择“退出牛马上班”，再运行 EXE 或 MSI 安装。EXE 与 MSI 二选一即可。\n\n验证范围：收入与更新集成测试通过；macOS 通用架构及 ad-hoc 签名验证通过；Windows Rust/Tauri、NSIS 和 MSI 构建通过。Windows 真机的托盘图标、无边框拖动、登录启动及安装升级仍需安装后复验。\n",
-  "url": "https://github.com/Hcx-grass-star/niuma-macos/releases/tag/v0.2.2",
-  "macos": "https://github.com/Hcx-grass-star/niuma-macos/releases/download/v0.2.2/niuma-0.2.2-macOS-universal.zip",
-  "windows": "https://github.com/Hcx-grass-star/niuma-macos/releases/download/v0.2.2/niuma-0.2.2-windows-x64-setup.exe"
+  "version": "0.3.0",
+  "notes": "本次更新新增应用内安装更新，以及手动打开新版时自动替换、回收旧版本。\n\n- 原生 macOS：Sparkle 下载与签名校验，原位覆盖并重启。\n- Tauri：签名更新、下载进度、失败重试和手动下载入口；Windows 沿用正式安装器升级。\n- 手动打开新版 macOS 包时自动归位到“应用程序”；确认应用完成初始化后才把旧包移到废纸篓，启动失败恢复旧版。\n- 保留工资、排班和已有托盘收入功能；两种 macOS 实现不互相转换配置格式。\n\n**首次从 0.2.x 升级：** Mac 用户下载 `niuma-0.3.0-macOS-universal.zip`，解压后打开其中的应用；Windows 推荐下载 `niuma-0.3.0-Windows-x64-setup.exe` 并安装。以后可在“设置 → 应用更新”点击“安装更新”。\n\n`tauri-niuma-0.3.0-macOS-aarch64.app.tar.gz` 是 Tauri Apple Silicon 版本及其更新包；Intel Mac 使用原生 universal ZIP。macOS 首次打开可能需要在“系统设置 → 隐私与安全性”批准，当前未进行 Apple 公证。\n\n已验证：两种 macOS 实际进程的手动覆盖与崩溃回滚、原生 Sparkle 有效签名安装/篡改拒绝、Windows runner 0.2.1→0.3.0 NSIS实际覆盖（同目录、单卸载项、保留配置哨兵）、收入回归。MSI实际安装、Windows应用内完整重启、Intel及其他macOS版本仍待对应环境验收。\n",
+  "url": "https://github.com/Hcx-grass-star/niuma-macos/releases/tag/v0.3.0",
+  "macos": "https://github.com/Hcx-grass-star/niuma-macos/releases/download/v0.3.0/niuma-0.3.0-macOS-universal.zip",
+  "windows": "https://github.com/Hcx-grass-star/niuma-macos/releases/download/v0.3.0/niuma-0.3.0-Windows-x64-setup.exe"
 }
