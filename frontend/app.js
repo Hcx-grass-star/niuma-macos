@@ -1,9 +1,12 @@
 import { evaluateIncome, validateSettings } from './income-engine.mjs';
+import { initUpdates } from './updates.js';
 
 /** 默认配置；工资为空时显示首次使用状态，不生成示例收入。 */
 const defaults = { mode: 'monthly', salary: null, weekdays: [1, 2, 3, 4, 5], start: '09:00', end: '18:00', rests: [{ start: '12:00', end: '13:00' }], divisor: 'schedule', fixedDays: 22, encouragement: true, hidden: false };
 const storageKey = 'niuma.settings.v1';
+/** 当前配置与隐私显示状态；重启后继续保护两个金额。 */
 const state = { settings: loadSettings(), hidden: false };
+state.hidden = state.settings?.hidden === true;
 const $ = (id) => document.getElementById(id);
 
 /** 从跨平台本地存储读取设置；损坏数据回退到首次使用状态。 */
@@ -24,6 +27,19 @@ function render() {
   $('year-amount').textContent = state.hidden ? '••••' : money(snapshot.yearToDateAmount);
   $('hide').textContent = state.hidden ? '◎' : '◉'; $('hide').setAttribute('aria-label', state.hidden ? '显示金额' : '隐藏金额');
 }
+/** 保存成功后才切换两个金额的显示状态，避免重启后意外暴露收入。 */
+function togglePrivacy() {
+  const hidden = !state.hidden;
+  try {
+    const next = { ...state.settings, hidden };
+    saveSettings(next);
+    state.settings = next;
+    state.hidden = hidden;
+    render();
+  } catch {
+    window.alert('金额隐藏状态保存失败，请重试。');
+  }
+}
 /** 根据设置状态切换月薪折算字段，避免日薪模式出现无效输入。 */
 function updateDraftVisibility() { const monthly = $('mode').value === 'monthly'; $('divisor-wrap').hidden = !monthly; $('fixed-wrap').hidden = !monthly || $('divisor').value !== 'fixed'; $('rest-fields').hidden = !$('rest-enabled').checked; }
 /** 用当前设置填充编辑表单，取消编辑不会改变已生效配置。 */
@@ -41,7 +57,8 @@ function submitSettings(event) { event.preventDefault(); const next = { mode: $(
 /** 初始化星期按钮，使用 JavaScript 的周日 0 到周六 6 编号。 */
 function initWeekdays() { const names = ['日', '一', '二', '三', '四', '五', '六']; $('weekdays').innerHTML = names.map((name, day) => `<button class="weekday" type="button" data-day="${day}" aria-pressed="${defaults.weekdays.includes(day)}">${name}</button>`).join(''); document.querySelectorAll('.weekday').forEach((button) => button.addEventListener('click', () => button.setAttribute('aria-pressed', String(button.getAttribute('aria-pressed') !== 'true')))); }
 
-initWeekdays(); $('open-settings').addEventListener('click', openSettings); $('back').addEventListener('click', () => { $('settings').hidden = true; $('home').hidden = false; render(); }); $('settings').addEventListener('submit', submitSettings); $('mode').addEventListener('change', updateDraftVisibility); $('divisor').addEventListener('change', updateDraftVisibility); $('rest-enabled').addEventListener('change', updateDraftVisibility); $('autostart').addEventListener('change', () => setAutostart($('autostart').checked)); $('hide').addEventListener('click', () => { state.hidden = !state.hidden; render(); });
+initWeekdays(); $('open-settings').addEventListener('click', openSettings); $('back').addEventListener('click', () => { $('settings').hidden = true; $('home').hidden = false; render(); }); $('settings').addEventListener('submit', submitSettings); $('mode').addEventListener('change', updateDraftVisibility); $('divisor').addEventListener('change', updateDraftVisibility); $('rest-enabled').addEventListener('change', updateDraftVisibility); $('autostart').addEventListener('change', () => setAutostart($('autostart').checked)); $('hide').addEventListener('click', togglePrivacy);
 if (window.__TAURI__?.event?.listen) window.__TAURI__.event.listen('open-settings', openSettings);
 render(); if (state.settings?.salary == null) openSettings(); setInterval(render, 1000);
 loadAutostart();
+initUpdates();

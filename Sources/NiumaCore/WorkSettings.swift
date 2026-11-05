@@ -1,6 +1,6 @@
 import Foundation
 
-/// 工资输入口径，不改变面板只展示当前收入的规则。
+/// 当前班次及本年预估收入共同使用的工资输入口径。
 public enum PayMode: String, Codable, Sendable {
     case monthly, daily
 }

@@ -5,7 +5,7 @@ import NiumaCore
 @main
 struct SalaryFlowIntegrationTests {
     /// 执行真实存储和计算的集成用例，任何失败都返回非零退出码。
-    static func main() {
+    static func main() async {
         let suite = SalaryFlowIntegrationTests()
         let cases: [(String, () throws -> Void)] = [
             ("月薪及休息边界", suite.testMonthlySavedScheduleAndRestBoundaries),
@@ -15,15 +15,19 @@ struct SalaryFlowIntegrationTests {
             ("无效保存保护旧设置", suite.testInvalidSavePreservesPreviousSettings),
             ("重置及损坏配置", suite.testResetAndCorruptFileRecovery),
             ("多段休息及下次状态边界", suite.testMultipleRestsAndNextBoundary),
-            ("夏令时歧义拒绝", suite.testDaylightSavingAmbiguity)
+            ("夏令时歧义拒绝", suite.testDaylightSavingAmbiguity),
+            ("本年预估收入", suite.testYearToDateAmount),
+            ("年度回算边界", suite.testYearToDateBoundaries)
         ]
         var failures = 0
         for (name, run) in cases {
             do { try run(); print("PASS: " + name) }
             catch { failures += 1; print("FAIL: " + name + " — " + error.localizedDescription) }
         }
+        do { try await UpdateIntegrationTests.run() }
+        catch { failures += 1; print("FAIL: 更新检查 — " + error.localizedDescription) }
         guard failures == 0 else { exit(1) }
-        print("全部 " + String(cases.count) + " 组集成验证通过。")
+        print("全部 " + String(cases.count) + " 组收入集成与更新检查验证通过。")
     }
 
     /// 样例固定使用上海时区，避免运行机器时区影响断言。
@@ -34,8 +38,8 @@ struct SalaryFlowIntegrationTests {
     }
 
     /// 构造验收样例的明确本地日期，绝不修改系统时钟。
-    private func date(_ day: Int, _ hour: Int, _ minute: Int = 0, month: Int = 11) -> Date {
-        calendar.date(from: DateComponents(year: 2026, month: month, day: day, hour: hour, minute: minute))!
+    private func date(_ day: Int, _ hour: Int, _ minute: Int = 0, month: Int = 11, year: Int = 2026) -> Date {
+        calendar.date(from: DateComponents(year: year, month: month, day: day, hour: hour, minute: minute))!
     }
 
     /// 使用独立临时目录模拟保存后重启，再按指定时刻计算收入。
@@ -57,6 +61,14 @@ struct SalaryFlowIntegrationTests {
     /// 对内部未舍入金额仅在断言显示结果时取两位小数。
     private func amount(_ snapshot: IncomeSnapshot) -> Decimal? {
         guard var value = snapshot.amount else { return nil }
+        var result = Decimal()
+        NSDecimalRound(&result, &value, 2, .plain)
+        return result
+    }
+
+    /// 对本年累计金额使用与当前金额相同的两位小数展示规则。
+    private func amount(_ value: Decimal?) -> Decimal? {
+        guard var value else { return nil }
         var result = Decimal()
         NSDecimalRound(&result, &value, 2, .plain)
         return result
@@ -166,6 +178,56 @@ struct SalaryFlowIntegrationTests {
         try expectEqual(resting.nextBoundary, date(4, 13))
         let ended = try persistedSnapshot(settings, at: date(4, 18))
         try expectEqual(ended.nextBoundary, date(5, 9))
+    }
+
+    /// 本年金额按当前配置回算，包含已完成班次和当前班次的已计薪部分。
+    func testYearToDateAmount() throws {
+        let working = try persistedSnapshot(monthly(), at: date(4, 14))
+        try expectEqual(amount(working.yearToDateAmount), Decimal(212500))
+        let offDay = try persistedSnapshot(monthly(), at: date(8, 14))
+        try expectEqual(offDay.phase, .off)
+        try expectEqual(amount(offDay.yearToDateAmount), Decimal(215000))
+        try expectNil(try IncomeEngine(calendar: calendar).evaluate(nil, at: date(4, 14)).yearToDateAmount)
+        var changed = monthly()
+        changed.salary = 42000
+        try expectEqual(amount(try persistedSnapshot(changed, at: date(4, 14)).yearToDateAmount), 425000)
+    }
+
+    /// 验证年度截断、闰日、固定折算与休息扣除，不依赖真实系统日期。
+    func testYearToDateBoundaries() throws {
+        var settings = monthly()
+        settings.payMode = .daily
+        settings.salary = 800
+        for (hour, minute, expected) in [(0, 0, 0), (12, 0, 300), (12, 30, 300), (18, 0, 800)] {
+            let result = try persistedSnapshot(settings, at: date(1, hour, minute, month: 1))
+            try expectEqual(amount(result.yearToDateAmount), Decimal(expected))
+        }
+        let yearEnd = try persistedSnapshot(settings, at: date(31, 20, month: 12))
+        try expectEqual(yearEnd.nextBoundary, date(1, 0, month: 1, year: 2027))
+        settings.weekdays = Set(1...7)
+        let leap = try persistedSnapshot(settings, at: date(1, 9, month: 3, year: 2024))
+        try expectEqual(amount(leap.yearToDateAmount), 48000)
+        settings.payMode = .monthly
+        settings.salary = 31000
+        let february = try persistedSnapshot(settings, at: date(1, 14, month: 2))
+        try expectEqual(amount(february.yearToDateAmount), Decimal(string: "31553.57"))
+        settings.startMinute = 1320
+        settings.endMinute = 360
+        settings.rests = []
+        let midnight = try persistedSnapshot(settings, at: date(1, 0, month: 1))
+        try expectEqual(amount(midnight.yearToDateAmount), 0)
+        let overnight = try persistedSnapshot(settings, at: date(1, 2, month: 1))
+        try expectEqual(amount(overnight), 500)
+        try expectEqual(amount(overnight.yearToDateAmount), 250)
+        settings.rests = [.init(start: 0, end: 60)]
+        let resting = try persistedSnapshot(settings, at: date(1, 0, 30, month: 1))
+        try expectEqual(amount(resting.yearToDateAmount), 0)
+        settings = monthly()
+        settings.salary = 22000
+        settings.divisorMode = .fixed
+        settings.fixedDays = 22
+        let fixed = try persistedSnapshot(settings, at: date(2, 14, month: 1))
+        try expectEqual(amount(fixed.yearToDateAmount), 1500)
     }
 
     /// 非上海时区遇到重复或不存在的钟表时间时必须明确拒绝。

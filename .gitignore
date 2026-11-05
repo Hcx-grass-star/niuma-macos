@@ -26,3 +26,5 @@ xcuserdata/
 # Tauri 与前端的本地依赖、由共享核心同步生成的前端副本。
 node_modules/
 frontend/income-engine.mjs
+frontend/update-check.mjs
+frontend/app-version.json

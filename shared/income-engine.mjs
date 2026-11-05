@@ -58,11 +58,16 @@ export function validateSettings(settings) {
 /** 统计某个月中符合排班的日期数量，星期编号使用 JavaScript 的 0 到 6。 */
 export function workdaysInMonth(year, month, weekdays) {
   const last = new Date(year, month + 1, 0).getDate();
-  let count = 0;
-  for (let day = 1; day <= last; day += 1) {
-    if (weekdays.includes(new Date(year, month, day).getDay())) count += 1;
+  return scheduledDays(new Date(year, month, 1).getDay(), last, weekdays);
+}
+
+/** 整周直接计数，只检查剩余日期，避免年度汇总反复遍历日期。 */
+function scheduledDays(firstWeekday, count, weekdays) {
+  let total = Math.floor(count / 7) * new Set(weekdays).size;
+  for (let offset = 0; offset < count % 7; offset += 1) {
+    if (weekdays.includes((firstWeekday + offset) % 7)) total += 1;
   }
-  return count;
+  return total;
 }
 
 /** 根据班次开始日期计算一个完整班次的预估收入。 */
@@ -103,17 +108,29 @@ function paidMilliseconds(shift, lower, upper) {
   return Math.max(0, gross - unpaid);
 }
 
-/** 按当前配置回算本年一月一日至指定时刻的预估收入。 */
+/** 已完成班次按月汇总，仅展开跨年班和最近两天，回算本年预估收入。 */
 export function yearToDateIncome(settings, now = new Date()) {
   validateSettings(settings);
   const schedule = normalizedSchedule(settings);
   const yearStart = new Date(now.getFullYear(), 0, 1);
-  const firstDay = new Date(yearStart);
-  firstDay.setDate(firstDay.getDate() - 1);
-  const lastDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
   let total = 0;
-  for (let day = firstDay; day <= lastDay; day.setDate(day.getDate() + 1)) {
-    const shift = shiftForDate(new Date(day), schedule, settings);
+  for (let month = 0; month <= now.getMonth(); month += 1) {
+    const monthStart = new Date(now.getFullYear(), month, 1);
+    if (monthStart >= yesterday) break;
+    const monthEnd = new Date(now.getFullYear(), month + 1, 1);
+    const days = monthEnd <= yesterday
+      ? new Date(now.getFullYear(), month + 1, 0).getDate()
+      : yesterday.getDate() - 1;
+    const count = scheduledDays(monthStart.getDay(), days, settings.weekdays);
+    if (count > 0) total += dailyIncome(settings, monthStart) * count;
+  }
+  const priorYearDay = new Date(yearStart);
+  priorYearDay.setDate(priorYearDay.getDate() - 1);
+  for (const timestamp of new Set([priorYearDay.getTime(), yesterday.getTime(), today.getTime()])) {
+    const shift = shiftForDate(new Date(timestamp), schedule, settings);
     if (!shift) continue;
     const lower = new Date(Math.max(shift.start.getTime(), yearStart.getTime()));
     const upper = new Date(Math.min(shift.end.getTime(), now.getTime()));
@@ -127,7 +144,7 @@ export function yearToDateIncome(settings, now = new Date()) {
 
 /** 根据当前时间计算收入快照；不依赖计时器累计，便于两个系统保持一致。 */
 export function evaluateIncome(settings, now = new Date()) {
-  if (!settings) return { phase: 'unconfigured', amount: null, progress: 0 };
+  if (!settings) return { phase: 'unconfigured', amount: null, yearToDateAmount: null, progress: 0 };
   validateSettings(settings);
   const schedule = normalizedSchedule(settings);
   const yearToDateAmount = yearToDateIncome(settings, now);
