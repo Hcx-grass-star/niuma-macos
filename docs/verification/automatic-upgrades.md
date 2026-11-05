@@ -12,8 +12,8 @@
 | Tauri macOS 手动升级 | 同命令加 `--tauri`，使用本地锁定 Rust 缓存 | PASS；同样的实际进程覆盖与崩溃回滚。测试只在隔离副本替换身份、正式目录及加入启动回执观测，不向正式源码添加测试开关 |
 | 原生应用内更新 | `python3 scripts/test-sparkle-installation.py` | PASS；真实 Sparkle 标准窗口、本地 HTTP 和临时 Ed25519 密钥；损坏签名在解压前拒绝；有效签名下载、覆盖并重启到新版；深层签名验证通过 |
 | Tauri 前端交互 | ego-browser，本地实际前端 + 显式模拟 Tauri bridge / 版本清单 | PASS；安装命令只发一次，显示42%进度，安装期间禁用检查/重复安装/手动入口，失败后恢复按钮和重试，手动入口打开正确发布页；远端说明按文本显示。此项只证明前端接线，不冒充真实安装 |
-| Windows NSIS | GitHub 托管 Windows runner 实际安装0.2.1，再运行0.3.0安装器 | PASS；沿用旧目录、执行文件更新、单一卸载项、原配置哨兵不变；测试卸载后清理自有数据。首轮 run 41993201111；合并托盘功能后的最终 run 另见发布记录 |
-| 构建 | 原生 arm64+x86_64，Sparkle与安装助手随包；Tauri macOS arm64；Windows NSIS/MSI | 原生和Tauri macOS 已真实构建及深层签名校验；Windows构建见CI |
+| Windows NSIS | GitHub 托管 Windows runner 实际安装0.2.1，再运行0.3.0安装器 | PASS；沿用旧目录、执行文件更新、单一卸载项、原配置哨兵不变；测试卸载后清理自有数据。首轮 run 41993201111；合并托盘功能后的最终 run 41999415016 同样成功 |
+| 构建 | 原生 arm64+x86_64，Sparkle与安装助手随包；Tauri macOS arm64；Windows NSIS/MSI | 原生和Tauri macOS 已真实构建及深层签名校验；Windows构建及NSIS实际安装升级见成功CI 41999415016 |
 
 ## 修复所依据的失败证据
 
@@ -28,3 +28,7 @@
 - 未在 Intel、macOS13/14、权限不足的系统目录、旧进程拒绝退出、登录项路径迁移后真实重新登录等环境完成验收。开发构建不自动归位。
 - 当前为临时系统签名，发布更新另有独立 Ed25519/minisign 签名。首次打开仍可能需要用户批准；未声称通过 Apple 公证。
 - 不扫描全盘、不清空废纸篓、不删除其他应用、未知同版本构建或较新版；原始压缩包保留。测试脚本只清理自己的随机身份、进程、临时应用、回收物和缓存。
+
+最终 Tauri macOS 更新包另使用 updater 同一 `minisign-verify 0.3.0` 校验器验证：真实签名与受签名保护的 `version:0.3.0` 接受；改动首字节后的包拒绝。此项不替代 Tauri 完整应用内重启验收。
+
+最终 Windows `.exe` 和 `.msi` 附件也已通过同一校验器的签名、版本绑定及篡改拒绝校验；实际NSIS升级日志为 [41999415016](https://github.com/Hcx-grass-star/niuma-macos/actions/runs/41999415016)。原生通用ZIP的SHA256：`d6d60ca0ced810857bbe5c1f04c1cffcc46f7943ce7f6ce6e417e9a842981575`。
