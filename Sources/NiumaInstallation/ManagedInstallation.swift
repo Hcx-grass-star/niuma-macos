@@ -21,7 +21,7 @@ public enum ManagedInstallation {
     public static func isInstalledLocation(_ source: URL) -> Bool {
         let local = URL(fileURLWithPath: "/Applications").appendingPathComponent(applicationName)
         let user = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Applications/" + applicationName)
-        return source.standardizedFileURL == local || source.standardizedFileURL == user
+        return source.standardizedFileURL.path == local.standardizedFileURL.path || source.standardizedFileURL.path == user.standardizedFileURL.path
     }
 
     /// 启动独立助手并等待它验证源应用，之后调用方才能安全退出。
@@ -41,7 +41,7 @@ public enum ManagedInstallation {
 
     /// 确认用户已运行本包后完成归位；成功启动新入口前不清理下载源与旧备份。
     public static func install(source: URL, parentPID: pid_t, onPrepared: () -> Void) async throws {
-        guard parentPID > 1, let parent = NSRunningApplication(processIdentifier: parentPID), parent.bundleURL?.standardizedFileURL == source.standardizedFileURL else { throw InstallationError.invalidBundle }
+        guard parentPID > 1, let parent = NSRunningApplication(processIdentifier: parentPID), parent.bundleURL?.standardizedFileURL.path == source.standardizedFileURL.path else { throw InstallationError.invalidBundle }
         let current = try InstalledBundle(url: source, identifier: identifier)
         let manager = FileManager.default
         let destination = try installationDestination()
@@ -52,6 +52,10 @@ public enum ManagedInstallation {
         defer { close(descriptor) }
         guard flock(descriptor, LOCK_EX | LOCK_NB) == 0 else { throw InstallationError.stillRunning }
         defer { flock(descriptor, LOCK_UN) }
+        let startupDirectory = manager.temporaryDirectory.appendingPathComponent("niuma-startup-" + UUID().uuidString)
+        try manager.createDirectory(at: startupDirectory, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
+        defer { try? manager.removeItem(at: startupDirectory) }
+        let receipt = startupDirectory.appendingPathComponent("ready")
 
         let previous = try? InstalledBundle(url: destination, identifier: identifier)
         // 手动打开旧下载包时使用已安装的更新版本，绝不反向覆盖。
@@ -72,9 +76,9 @@ public enum ManagedInstallation {
                 quarantine.standardError = FileHandle.nullDevice
                 try quarantine.run(); quarantine.waitUntilExit()
             }
-            let running = try await launch(destination)
+            let running = try await launch(destination, receipt: receipt)
             do {
-                try await waitUntilReady(running)
+                try await waitUntilReady(running, receipt: receipt)
             } catch {
                 _ = running.terminate()
                 try? await waitForExit(running)
@@ -103,6 +107,18 @@ public enum ManagedInstallation {
         try await cleanup(current: current, candidates: NSWorkspace.shared.urlsForApplications(withBundleIdentifier: identifier))
     }
 
+    /// 菜单栏或前端完成初始化后写入一次性回执，系统“进程已启动”不能代替应用就绪。
+    public static func confirmStartup(processID: pid_t = ProcessInfo.processInfo.processIdentifier) throws {
+        let environment = ProcessInfo.processInfo.environment
+        guard environment["NIUMA_INSTALLATION_MANAGED"] == "1", let path = environment["NIUMA_INSTALLATION_RECEIPT"] else { return }
+        let receipt = URL(fileURLWithPath: path).standardizedFileURL
+        let directory = receipt.deletingLastPathComponent()
+        let prefix = "niuma-startup-"
+        guard receipt.lastPathComponent == "ready", directory.deletingLastPathComponent().path == FileManager.default.temporaryDirectory.standardizedFileURL.path,
+              directory.lastPathComponent.hasPrefix(prefix), UUID(uuidString: String(directory.lastPathComponent.dropFirst(prefix.count))) != nil else { throw InstallationError.launch }
+        try Data(String(processID).utf8).write(to: receipt, options: .atomic)
+    }
+
     /// 只处理本用户可写区域内同身份的 .app；下载源同版本时还必须匹配执行文件哈希。
     public static func cleanup(current: InstalledBundle, candidates: [URL], downloadedHash: Data? = nil) async throws {
         let manager = FileManager.default
@@ -111,7 +127,7 @@ public enum ManagedInstallation {
         var failures = false
         for url in candidates {
             let path = url.standardizedFileURL.path
-            guard seen.insert(path).inserted, url.standardizedFileURL != current.url,
+            guard seen.insert(path).inserted, path != current.url.path,
                   !path.contains("/.Trash/"), !path.contains("/AppTranslocation/"),
                   path.hasPrefix(home) || path.hasPrefix("/Applications/"),
                   let old = try? InstalledBundle(url: url, identifier: identifier) else { continue }
@@ -138,8 +154,10 @@ public enum ManagedInstallation {
     }
 
     /// 使用系统打开接口避免 shell 路径展开，并使新进程跳过重复的归位检查。
-    private static func launch(_ url: URL, restoring: Bool = false) async throws -> NSRunningApplication {
-        if let existing = NSRunningApplication.runningApplications(withBundleIdentifier: identifier).first(where: { $0.bundleURL?.standardizedFileURL == url.standardizedFileURL && !$0.isTerminated && $0.isFinishedLaunching }) {
+    private static func launch(_ url: URL, restoring: Bool = false, receipt: URL? = nil) async throws -> NSRunningApplication {
+        if let existing = NSRunningApplication.runningApplications(withBundleIdentifier: identifier).first(where: { $0.bundleURL?.standardizedFileURL.path == url.standardizedFileURL.path && !$0.isTerminated && $0.isFinishedLaunching }) {
+            // 打开较旧下载包时复用已经运行的较新正式入口，不要求现有进程接收新的环境变量。
+            if let receipt { try Data(String(existing.processIdentifier).utf8).write(to: receipt, options: .atomic) }
             if #available(macOS 14.0, *) { existing.activate() }
             else { existing.activate(options: [.activateIgnoringOtherApps]) }
             return existing
@@ -147,14 +165,17 @@ public enum ManagedInstallation {
         let configuration = NSWorkspace.OpenConfiguration()
         configuration.createsNewApplicationInstance = true
         configuration.environment = restoring ? ["NIUMA_SKIP_INSTALLATION": "1"] : ["NIUMA_INSTALLATION_MANAGED": "1"]
+        if let receipt { configuration.environment?["NIUMA_INSTALLATION_RECEIPT"] = receipt.path }
         return try await NSWorkspace.shared.openApplication(at: url, configuration: configuration)
     }
 
     /// 启动完成且进程仍存活才视为安装成功，失败时允许恢复旧正式入口。
-    private static func waitUntilReady(_ application: NSRunningApplication) async throws {
+    private static func waitUntilReady(_ application: NSRunningApplication, receipt: URL) async throws {
         let deadline = Date().addingTimeInterval(30)
-        while !application.isFinishedLaunching && !application.isTerminated && Date() < deadline { try await Task.sleep(for: .milliseconds(100)) }
-        guard application.isFinishedLaunching, !application.isTerminated else { throw InstallationError.launch }
+        /// 回执绑定实际新进程，避免旧进程或历史文件被误当作本次成功。
+        func ready() -> Bool { (try? String(contentsOf: receipt, encoding: .utf8)) == String(application.processIdentifier) }
+        while (!application.isFinishedLaunching || !ready()) && !application.isTerminated && Date() < deadline { try await Task.sleep(for: .milliseconds(100)) }
+        guard application.isFinishedLaunching, !application.isTerminated, ready() else { throw InstallationError.launch }
     }
 
     /// 只请求对应包进程正常退出，不强杀保存草稿或系统授权中的应用。
@@ -163,7 +184,7 @@ public enum ManagedInstallation {
         let targetHash = try executableHash(target.executable)
         for application in NSRunningApplication.runningApplications(withBundleIdentifier: identifier) where application.processIdentifier != ProcessInfo.processInfo.processIdentifier {
             guard let runningURL = application.bundleURL else { continue }
-            let exactPath = runningURL.standardizedFileURL == url.standardizedFileURL
+            let exactPath = runningURL.standardizedFileURL.path == url.standardizedFileURL.path
             // Gatekeeper 随机转位会改变运行路径；版本与执行文件同时相同才能认定为此旧副本。
             let translocated = runningURL.path.contains("/AppTranslocation/")
                 && (try? InstalledBundle(url: runningURL, identifier: identifier)).map { $0.version == target.version && (try? executableHash($0.executable)) == targetHash } == true
@@ -176,8 +197,12 @@ public enum ManagedInstallation {
     /// 有限等待父进程或旧应用退出，拒绝在仍占用旧包时继续替换。
     private static func waitForExit(_ application: NSRunningApplication) async throws {
         let deadline = Date().addingTimeInterval(15)
-        while !application.isTerminated && Date() < deadline { try await Task.sleep(for: .milliseconds(100)) }
-        guard application.isTerminated else { throw InstallationError.stillRunning }
+        // 启动阶段即交接退出的进程可能没有发送 AppKit 终止通知；内核确认不存在同样可证明已退出。
+        func exited() -> Bool {
+            application.isTerminated || (kill(application.processIdentifier, 0) == -1 && errno == ESRCH)
+        }
+        while !exited() && Date() < deadline { try await Task.sleep(for: .milliseconds(100)) }
+        guard exited() else { throw InstallationError.stillRunning }
     }
 
     /// 下载源与执行中的版本通过内容匹配，不依赖同名文件猜测来源。

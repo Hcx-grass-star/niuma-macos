@@ -9,14 +9,26 @@
 </head>
 <body>
   <main class="app" aria-label="牛马上班">
-    <header class="brand"><span class="sprout" aria-hidden="true">✦</span><strong>牛马上班</strong><span class="platform">跨平台版</span></header>
+    <header class="brand titlebar" data-tauri-drag-region>
+      <span class="sprout" aria-hidden="true" data-tauri-drag-region>✦</span><strong data-tauri-drag-region>牛马上班</strong><span class="platform" data-tauri-drag-region>跨平台版</span>
+      <div class="window-controls" role="group" aria-label="窗口控制">
+        <button id="window-minimize" class="window-control" type="button" aria-label="最小化" title="最小化">−</button>
+        <button id="window-close" class="window-control window-close" type="button" aria-label="关闭到托盘" title="关闭到托盘">×</button>
+      </div>
+    </header>
     <section id="home" class="panel" aria-live="polite">
-      <div class="toolbar"><span id="phase">尚未设置</span><button id="hide" class="icon" type="button" aria-label="隐藏金额">◉</button></div>
+      <div class="toolbar"><span class="phase-badge"><span id="status-dot" class="status-dot" aria-hidden="true"></span><span id="phase">尚未设置</span></span><button id="hide" class="icon" type="button" aria-label="隐藏金额" title="隐藏金额">◉</button></div>
       <div class="income">
-        <div class="label">当前已赚</div>
-        <div id="amount" class="amount">—</div>
-        <div class="label">本班预估</div>
-        <div class="year-total"><div id="year-amount" class="year-amount">—</div><div class="label">本年预估已赚</div><div class="label year-basis">按当前工资和排班回算</div></div>
+        <section class="metric metric-primary" aria-label="当前班次收入">
+          <div class="label">当前已赚</div>
+          <div id="amount" class="amount">—</div>
+          <div class="metric-caption">按当前时间实时计算</div>
+        </section>
+        <section class="year-total" aria-label="本年收入预估">
+          <div class="label">本年预估已赚</div>
+          <div id="year-amount" class="year-amount">—</div>
+          <div class="label year-basis">按当前工资和排班回算</div>
+        </section>
       </div>
       <p id="quote" class="quote">设置一下，看看时间值多少钱。</p>
       <div id="update-banner" class="update-banner" role="status" hidden><span id="update-title"></span><button id="banner-details" type="button">更新说明</button><button id="banner-download" type="button">前往下载</button></div>
@@ -33,12 +45,13 @@
       <label id="divisor-wrap">月薪折算<select id="divisor"><option value="schedule">本月排班天数</option><option value="fixed">指定折算天数</option></select></label>
       <label id="fixed-wrap" hidden>折算天数<input id="fixed-days" type="number" min="0.01" step="0.01" /></label>
       <label class="check"><input id="encouragement" type="checkbox" checked /> 显示鼓励文案</label>
+      <label class="check"><input id="tray-income" type="checkbox" /> 托盘显示当前收入</label>
       <label class="check"><input id="autostart" type="checkbox" /> 登录后自动启动</label>
       <section class="updates" aria-label="应用更新">
         <strong>应用更新</strong><p id="app-version">当前版本：读取中</p>
         <label class="check"><input id="automatic-updates" type="checkbox" checked /> 自动检测更新（立即生效）</label>
         <p>启动时检查，此后每24小时最多自动检查一次；仅获取公开版本信息。</p>
-        <button id="check-updates" type="button">检查更新</button><button id="update-download" type="button" hidden>前往下载</button>
+        <button id="check-updates" type="button">检查更新</button><button id="update-download" type="button" hidden>前往下载</button><button id="update-manual" type="button" hidden>手动下载</button>
         <p id="update-status" role="status">尚未检查更新。</p><pre id="update-notes" hidden></pre>
       </section>
       <p class="settings-note">保存后会重算本班及本年预估收入，显示金额可能变化。</p>

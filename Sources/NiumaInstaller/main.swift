@@ -17,6 +17,11 @@ Task { @MainActor in
                 handedOff = true
                 FileHandle.standardOutput.write(Data("READY\n".utf8))
             }
+        case "ready":
+            guard arguments.count == 4, let pid = Int32(arguments[3]),
+                  NSRunningApplication(processIdentifier: pid)?.bundleURL?.standardizedFileURL.path == source.standardizedFileURL.path else { throw InstallationError.invalidBundle }
+            try ManagedInstallation.confirmStartup(processID: pid)
+            try await ManagedInstallation.cleanupCurrentBundle(source)
         case "cleanup": try await ManagedInstallation.cleanupCurrentBundle(source)
         default: throw InstallationError.invalidBundle
         }

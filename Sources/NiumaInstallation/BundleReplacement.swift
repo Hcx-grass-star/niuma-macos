@@ -64,7 +64,7 @@ public final class BundleReplacement {
         self.source = try InstalledBundle(url: source, identifier: identifier)
         self.destination = destination.standardizedFileURL
         self.identifier = identifier
-        guard destination.pathExtension == "app", source.standardizedFileURL != self.destination else { throw InstallationError.invalidBundle }
+        guard destination.pathExtension == "app", source.standardizedFileURL.path != self.destination.path else { throw InstallationError.invalidBundle }
         if manager.fileExists(atPath: destination.path) {
             let previous = try InstalledBundle(url: destination, identifier: identifier)
             guard previous.version <= self.source.version else { throw InstallationError.downgrade }

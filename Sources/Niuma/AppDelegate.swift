@@ -53,6 +53,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         refresh()
         if settings == nil { showSettings() }
         updates.start()
+        do { try ManagedInstallation.confirmStartup() }
+        catch { showAlert(error.localizedDescription) }
         // 菜单栏已创建后才回收旧副本；开发包不进行自动清理。
         if Bundle.main.object(forInfoDictionaryKey: "NiumaInstallOnLaunch") as? Bool == true {
             Task { @MainActor in

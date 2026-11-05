@@ -23,13 +23,13 @@ npm run tauri:dev
 npm run tauri:build
 ```
 
-构建前会由 `scripts/sync-frontend-core.mjs` 把共享核心复制到 Tauri 的前端资源目录，源文件仍只有 `shared/income-engine.mjs` 一份。本机当前没有 Rust/Cargo，因此已经完成的 Node 核心测试和 JavaScript 静态检查可以运行，Tauri 原生编译与安装包尚未在本机完成验证。
+构建前会由 `scripts/sync-frontend-core.mjs` 把共享核心复制到 Tauri 的前端资源目录，源文件仍只有 `shared/income-engine.mjs` 一份。Tauri macOS 应用包已在隔离工具链中构建并验证签名；Windows 构建和 NSIS 旧版覆盖由 GitHub 托管 Windows runner 验证。
 
 Windows 构建可以直接使用 `scripts/build-windows.ps1`，或在 GitHub Actions 手动运行“Windows 构建”工作流。工作流会上传 NSIS `.exe` 和 MSI 安装包；拿到 Windows 构建产物后仍需在 Windows 10/11 真机完成托盘、自动启动、安装升级和卸载验收。
 
 ## 原生开发版
 
-当前已有 Swift + AppKit 原生工程，无第三方运行依赖。已在本机 M5、macOS 27.2、Swift 6.4.2 命令行工具链上构建，尚未完成正式发布验收。
+当前已有 Swift + AppKit 原生工程，自动更新使用锁定的 Sparkle 2.10.1。首次构建先执行 `swift package resolve`，之后使用本地缓存与 `Package.resolved`。已在本机 M5、macOS 27.2、Swift 6.4.2 命令行工具链上构建。
 
 ```bash
 # 构建通用（arm64 + x86_64）应用包，并验证本地临时签名。
@@ -70,12 +70,15 @@ macOS 13/14 上使用 `if #available` 回退：无参 `NSApp.activate()` 与 `NS
 
 原生版和 Tauri 版均提供“设置 → 应用更新”，展示实际应用版本、自动检查开关、“检查更新”和新版下载入口。自动检查默认开启，启动时及持续运行期间每天尝试一次，最近自动尝试时间会保存，24 小时内重启不会重复请求；手动检查可随时使用。开关立即生效，独立于工资表单保存与取消。
 
-从 0.2.1 起，优先读取 GitHub Pages 静态版本清单，主源失败或内容无效时才回退 GitHub API；主源正常时不消耗 API 匿名额度。清单仅同步本仓库已发布的正式 Release，排除草稿与预发布，按数值比较版本并检查本平台是否提供安装包。发现新版后，原生版显示提示和说明，Tauri 首页显示提示并可在设置中查看说明；用户点击后由系统浏览器打开发布页，下载和替换由用户操作。本次没有自动下载或安装功能。
+从 0.2.1 起，优先读取 GitHub Pages 静态版本清单，主源失败或内容无效时才回退 GitHub API；主源正常时不消耗 API 匿名额度。清单仅同步本仓库正式 Release，排除草稿、预发布和降级。从 0.3.0 起，点击“安装更新”后由 Sparkle（原生 macOS）或 Tauri updater 下载、验签、原位替换并重启；保留“手动下载”入口。0.2.x 首次升级仍需手动下载 0.3.0。
+
+手动打开新版 macOS 分发包时，安装助手先复制、验签，再退出旧进程并归位到“应用程序”；确认新版完成启动后把旧包及已匹配的下载副本移到废纸篓，失败则恢复旧入口。Windows 沿用 NSIS/MSI 安装器覆盖。工资和排班不参与应用文件替换；两种 macOS 实现不互相转换配置格式。验证记录见 [自动升级验证](docs/verification/automatic-upgrades.md)。
 
 检查仅获取公开版本信息，不携带工资、排班或账号凭证。断网、限流或服务异常时，后台检查不弹错误提示，收入计算继续离线可用；手动检查会显示具体状态。发布新版的方法见 [发布与更新](docs/发布与更新.md)，初始更新功能验证见 [更新检查验证](docs/verification/update-check.md)，0.2.1 的双源验证见 [静态清单验证](docs/verification/static-update-manifest.md)。
 
 ## 当前内容
 
+- [功能迭代清单](docs/功能迭代清单.md)：节假日与调休、排班例外、收入统计和日常体验四期规划，包含待办、验收标准及待确认规则。
 - [需求文档](docs/需求文档.md)：当前版本 v0.6，包含当前/本年预估收入、更新检查、M5 资源预算和 39 个验收场景。
 - [交互原型](prototype/index.html)：可直接在浏览器打开，体验当前收入、工资作息设置和工作状态预览。
 - [原型源片段](prototype/niuma-income.fragment.html)：用于维护交互原型；`index.html` 是供浏览器打开的导出版。
@@ -107,7 +110,7 @@ macOS 13/14 上使用 `if #available` 回退：无参 `NSApp.activate()` 与 `NS
 
 原生“清除设置并重置”会先关闭应用管理的自动启动，再移除自己的工资配置及更新检查偏好；不删除目录中的未知文件。若关闭启动或删除文件失败，界面说明原因并保留恢复入口。
 
-本机安装时将 `.app` 复制到“应用程序”后打开。卸载前先关闭自动启动，按需要执行重置，再退出并移除 `.app`。只删除 `.app` 不代表已经清除配置。
+正式分发包解压后可直接打开 `.app`，自动归位到“应用程序”；开发包保留在构建目录。卸载前先关闭自动启动，按需要执行重置，再退出并移除 `.app`。只删除 `.app` 不代表已经清除配置。
 
 ## 资源检查
 

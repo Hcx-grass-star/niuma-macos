@@ -1,23 +1,47 @@
-:root { color-scheme: light dark; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif; color: #202b25; background: #eef3ef; }
+:root { color-scheme: light dark; font-family: -apple-system, BlinkMacSystemFont, "Microsoft YaHei UI", "Microsoft YaHei", "Segoe UI", "PingFang SC", sans-serif; color: #17231d; background: #f2f6f3; }
 @media (prefers-color-scheme: dark) { :root { color: #edf3ef; background: #1b201d; } }
 * { box-sizing: border-box; }
-body { margin: 0; min-width: 320px; }
-.app { width: min(390px, 100vw); margin: 0 auto; padding: 18px; }
+/* Tauri 窗口不可调整大小；锁定视口后把长内容交给设置面板滚动。 */
+html, body { min-height: 100%; }
+body { height: 100vh; margin: 0; min-width: 320px; overflow: hidden; }
+.app { display: flex; height: 100vh; min-height: 0; flex-direction: column; width: min(390px, 100vw); margin: 0 auto; padding: 16px; }
 .brand, .toolbar, footer { display: flex; align-items: center; }
-.brand { gap: 8px; padding: 2px 4px 14px; }
-.sprout { color: #28664b; font-size: 18px; }
-.platform { margin-left: auto; color: #718078; font-size: 11px; }
-.panel { border: 1px solid #dbe4dd; border-radius: 18px; background: #fff; box-shadow: 0 12px 36px #23462b22; overflow: hidden; }
-@media (prefers-color-scheme: dark) { .panel { border-color: #3b473f; background: #232a25; box-shadow: 0 12px 36px #0006; } }
-.toolbar { justify-content: space-between; padding: 16px 18px 10px; }
+.brand { gap: 8px; padding: 0 0 10px 4px; }
+.brand strong { color: #17231d; font-size: 15px; letter-spacing: .02em; }
+.sprout { color: #2c8a5a; font-size: 18px; }
+.platform { margin-left: auto; color: #7a8a81; font-size: 11px; }
+.titlebar { min-height: 34px; user-select: none; }
+.window-controls { display: flex; align-self: stretch; gap: 2px; margin-left: 4px; }
+.window-control { display: grid; width: 34px; min-width: 34px; height: 30px; place-items: center; border-radius: 6px; color: #52645a; font-size: 17px; line-height: 1; }
+.window-control:hover { background: #e6eee8; }
+.window-close:hover { background: #c42b36; color: #fff; }
+@media (prefers-color-scheme: dark) { .window-control { color: #c6d8cb; } .window-control:hover { background: #304038; } .window-close:hover { background: #c42b36; color: #fff; } }
+.panel { display: flex; min-height: 0; flex-direction: column; flex: 1; border: 1px solid #d9e5dc; border-radius: 16px; background: #fff; box-shadow: 0 10px 28px #214b3214; overflow: hidden; }
+@media (prefers-color-scheme: dark) { .brand strong { color: #edf3ef; } .panel { border-color: #35453b; background: #222b25; box-shadow: 0 10px 28px #0005; } }
+.toolbar { justify-content: space-between; padding: 14px 16px 10px; }
 .toolbar > strong { font-size: 14px; }
-.icon { border: 0; border-radius: 8px; background: transparent; color: #718078; font-size: 20px; cursor: pointer; }
-.income { padding: 28px 18px 30px; text-align: center; }
-.label { color: #718078; font-size: 12px; }
-.amount { margin: 6px 0; font-size: 50px; font-variant-numeric: tabular-nums; letter-spacing: -2px; }
-.year-total { margin-top: 12px; }
-.year-amount { margin: 4px 0; font-size: 22px; font-variant-numeric: tabular-nums; }
-.year-basis { margin-top: 6px; font-size: 11px; }
+.phase-badge { display: inline-flex; align-items: center; gap: 7px; color: #26372d; font-size: 14px; font-weight: 600; }
+@media (prefers-color-scheme: dark) { .phase-badge { color: #edf3ef; } }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; background: #2c8a5a; box-shadow: 0 0 0 4px #e3f2e8; }
+.status-dot[data-phase="resting"] { background: #c28a25; }
+.status-dot[data-phase="off"], .status-dot[data-phase="finished"] { background: #7a8a81; }
+.status-dot[data-phase="unconfigured"] { background: #9aa9a0; }
+@media (prefers-color-scheme: dark) { .status-dot { box-shadow: 0 0 0 4px #2c8a5a33; } }
+.icon { display: inline-grid; width: 36px; height: 36px; place-items: center; border: 1px solid #d9e5dc; border-radius: 10px; background: #f8fbf9; color: #486356; font-size: 17px; cursor: pointer; }
+.icon:hover, .icon:focus-visible { border-color: #91c7a4; background: #edf8f0; }
+@media (prefers-color-scheme: dark) { .icon { border-color: #405248; background: #29352d; color: #c6d8cb; } .icon:hover, .icon:focus-visible { background: #304638; } }
+.income { display: flex; flex: 1; flex-direction: column; justify-content: center; padding: 18px 16px 20px; text-align: center; }
+.metric { padding: 18px 12px; border-radius: 12px; }
+.metric-primary { background: linear-gradient(145deg, #f1faf3, #f9fcfa); }
+@media (prefers-color-scheme: dark) { .metric-primary { background: linear-gradient(145deg, #263b2d, #27332b); } }
+.label { color: #728279; font-size: 12px; line-height: 18px; }
+.amount { margin: 4px 0 2px; color: #17231d; font-size: 46px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -2px; line-height: 1.15; }
+@media (prefers-color-scheme: dark) { .amount { color: #f1f7f2; } }
+.metric-caption { color: #83938a; font-size: 11px; line-height: 16px; }
+.year-total { margin-top: 14px; padding-top: 16px; border-top: 1px solid #e3ebe5; }
+.year-amount { margin: 4px 0 2px; color: #27372e; font-size: 24px; font-weight: 500; font-variant-numeric: tabular-nums; letter-spacing: -.5px; line-height: 1.25; }
+@media (prefers-color-scheme: dark) { .year-total { border-color: #35453b; } .year-amount { color: #e0ece3; } }
+.year-basis { margin-top: 2px; font-size: 11px; }
 .settings-note { margin: 0 18px 12px; color: #718078; font-size: 11px; }
 .updates { margin: 18px; padding: 14px 0; border-top: 1px solid #dbe4dd; font-size: 12px; }
 .updates p { color: #718078; font-size: 11px; line-height: 1.6; }
@@ -26,18 +50,22 @@ body { margin: 0; min-width: 320px; }
 .updates button:disabled { opacity: 0.5; cursor: default; }
 .updates pre { max-height: 140px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-family: inherit; font-size: 11px; }
 .update-banner { margin: 0 18px 18px; display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 11px; }
-.quote { min-height: 22px; margin: 0 24px 24px; color: #718078; text-align: center; font-size: 12px; }
-footer { justify-content: space-between; border-top: 1px solid #dbe4dd; padding: 10px 16px; color: #718078; font-size: 11px; }
+.quote { min-height: 22px; margin: 0 20px 18px; color: #687a6f; text-align: center; font-size: 12px; line-height: 18px; }
+footer { justify-content: space-between; border-top: 1px solid #e1eae3; padding: 10px 16px; color: #718078; font-size: 11px; }
 button { border: 0; background: transparent; color: inherit; cursor: pointer; }
 footer button, .save { border-radius: 8px; padding: 8px 12px; }
-footer button:hover, .icon:hover { background: #edf3ee; }
-.settings { padding-bottom: 18px; }
+footer button { border: 1px solid #d9e5dc; background: #f8fbf9; color: #356349; font-size: 12px; font-weight: 500; }
+footer button:hover, footer button:focus-visible { border-color: #91c7a4; background: #edf8f0; }
+@media (prefers-color-scheme: dark) { footer { border-color: #35453b; } footer button { border-color: #405248; background: #29352d; color: #bfe0c9; } }
+/* Windows WebView 的设置内容超过最小窗口时，保留标题和滚动位置上下文。 */
+.settings { padding-bottom: 18px; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; scrollbar-width: thin; }
+.settings > .toolbar { position: sticky; top: 0; z-index: 1; gap: 10px; background: inherit; }
 .settings label, fieldset { display: block; margin: 0 18px 13px; color: #718078; font-size: 11px; }
 fieldset { border: 0; padding: 0; }
 legend { margin-bottom: 6px; padding: 0; }
 select, input[type="number"], input[type="time"] { width: 100%; margin-top: 5px; border: 1px solid #dbe4dd; border-radius: 8px; padding: 8px; background: transparent; color: inherit; }
-.row { display: flex; gap: 10px; }
-.row label { flex: 1; margin: 0; }
+.row { display: flex; gap: 10px; margin: 0 18px 13px; }
+.row label { min-width: 0; flex: 1; margin: 0; }
 .weekdays { display: flex; gap: 4px; }
 .weekday { flex: 1; border: 1px solid #dbe4dd; border-radius: 8px; padding: 7px 0; }
 .weekday[aria-pressed="true"] { border-color: transparent; background: #e2f0e5; color: #28664b; }
@@ -45,4 +73,16 @@ select, input[type="number"], input[type="time"] { width: 100%; margin-top: 5px;
 .check input { accent-color: #28664b; }
 .error { margin: 0 18px 12px; color: #b33535; font-size: 12px; }
 .save { display: block; width: calc(100% - 36px); margin: 18px; background: #28664b; color: #fff; font-weight: 600; }
+/* 键盘操作保持清晰焦点，避免 Windows 高对比度或无鼠标操作时迷失位置。 */
+button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid #2c8a5a; outline-offset: 2px; }
+@media (prefers-color-scheme: dark) { button:focus-visible, select:focus-visible, input:focus-visible { outline-color: #8ed3a3; } }
+/* 适配 Windows 最小客户区高度，压缩留白但保留触控/鼠标目标尺寸。 */
+@media (max-height: 620px) {
+  .app { padding: 10px; }
+  .brand { padding-bottom: 8px; }
+  .toolbar { padding-top: 10px; padding-bottom: 8px; }
+  .income { padding-top: 12px; padding-bottom: 14px; }
+  .metric { padding-top: 14px; padding-bottom: 14px; }
+  .quote { margin-bottom: 12px; }
+}
 [hidden] { display: none !important; }

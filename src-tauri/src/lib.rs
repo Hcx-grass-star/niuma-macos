@@ -1,36 +1,56 @@
 use tauri::{
     menu::{MenuBuilder, MenuItem},
     tray::{MouseButton, TrayIconBuilder, TrayIconEvent},
-    AppHandle, Emitter, Manager, WindowEvent,
+    AppHandle, Emitter, Manager, State, WindowEvent,
 };
 use tauri_plugin_autostart::ManagerExt;
 use tauri_plugin_updater::UpdaterExt;
 
+/// 保存可动态更新的托盘收入菜单项，避免每秒重建整份原生菜单。
+struct TrayIncomeState {
+    /// 托盘菜单首项，仅展示当前收入，不响应点击。
+    item: MenuItem<tauri::Wry>,
+}
+
 /// 初始化跨平台窗口、系统托盘和自动启动能力。
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    #[cfg(all(target_os = "macos", not(debug_assertions)))]
-    if prepare_managed_installation().expect("无法启动应用安装助手") {
-        return;
-    }
     tauri::Builder::default()
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None,
         ))
-        .invoke_handler(tauri::generate_handler![set_autostart, autostart_enabled, update_environment, open_release_page, install_update, cleanup_old_versions])
+        .invoke_handler(tauri::generate_handler![
+            set_autostart,
+            autostart_enabled,
+            update_tray_income,
+            update_environment,
+            open_release_page,
+            install_update,
+            cleanup_old_versions
+        ])
         .setup(|app| {
+            // AppKit 初始化后，助手才可验证宿主进程的应用包身份。
+            #[cfg(all(target_os = "macos", not(debug_assertions)))]
+            if prepare_managed_installation()? {
+                app.handle().exit(0);
+                return Ok(());
+            }
+            let income = MenuItem::with_id(app, "income", "当前收入：未显示", false, None::<&str>)?;
             let show = MenuItem::with_id(app, "show", "查看当前收入", true, None::<&str>)?;
             let settings = MenuItem::with_id(app, "settings", "打开设置", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "退出牛马上班", true, None::<&str>)?;
             let menu = MenuBuilder::new(app)
+                .item(&income)
+                .separator()
                 .item(&show)
                 .item(&settings)
                 .separator()
                 .item(&quit)
                 .build()?;
-            TrayIconBuilder::new()
+            let tray = TrayIconBuilder::with_id("main")
+                .icon(app.default_window_icon().expect("应用图标缺失").clone())
                 .menu(&menu)
                 .show_menu_on_left_click(false)
                 .on_menu_event(|app, event| handle_menu_event(app, event.id.as_ref()))
@@ -40,6 +60,8 @@ pub fn run() {
                     }
                 })
                 .build(app)?;
+            tray.set_tooltip(Some("牛马上班 · 点击查看当前收入"))?;
+            app.manage(TrayIncomeState { item: income });
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.set_title("牛马上班");
             }
@@ -69,6 +91,24 @@ fn set_autostart(app: AppHandle, enabled: bool) -> Result<(), String> {
 #[tauri::command]
 fn autostart_enabled(app: AppHandle) -> Result<bool, String> {
     app.autolaunch().is_enabled().map_err(|error| error.to_string())
+}
+
+/// 同步托盘悬停提示和只读菜单项；金额文本由前端同一收入快照格式化。
+#[tauri::command]
+fn update_tray_income(
+    app: AppHandle,
+    state: State<'_, TrayIncomeState>,
+    enabled: bool,
+    text: String,
+) -> Result<(), String> {
+    let (menu_text, tooltip) = if enabled {
+        (format!("当前已赚：{text}"), format!("牛马上班 · 当前已赚 {text}"))
+    } else {
+        ("当前收入：未显示".into(), "牛马上班 · 点击查看当前收入".into())
+    };
+    state.item.set_text(menu_text).map_err(|error| error.to_string())?;
+    let tray = app.tray_by_id("main").ok_or("托盘图标尚未就绪")?;
+    tray.set_tooltip(Some(tooltip)).map_err(|error| error.to_string())
 }
 
 /// 从正式应用包返回真实版本与操作系统，避免前端硬编码版本导致重复提示。
@@ -107,7 +147,7 @@ async fn cleanup_old_versions(app: AppHandle) -> Result<(), String> {
         let helper = app.path().resource_dir().map_err(|_| "无法定位安装助手。")?.join("NiumaInstaller");
         let bundle = macos_bundle_path()?;
         tauri::async_runtime::spawn_blocking(move || {
-            let status = std::process::Command::new(helper).args(["cleanup", &bundle.to_string_lossy()]).status()
+            let status = std::process::Command::new(helper).args(["ready", &bundle.to_string_lossy(), &std::process::id().to_string()]).status()
                 .map_err(|_| "新版正常运行，但无法启动旧版本清理。".to_string())?;
             if status.success() { Ok(()) } else { Err("新版正常运行，但旧版本清理未完成，请退出旧版后重试。".to_string()) }
         }).await.map_err(|_| "旧版本清理未完成。".to_string())?

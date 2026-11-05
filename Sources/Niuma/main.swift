@@ -2,6 +2,10 @@ import AppKit
 import NiumaCore
 import NiumaInstallation
 
+// 先向系统注册 AppKit 应用身份，安装助手才能核对请求进程所属的应用包。
+let application = NSApplication.shared
+application.setActivationPolicy(.accessory)
+
 // 正式包先完成归位及覆盖，避免旧版仍在运行时直接把用户送回旧入口。
 if Bundle.main.object(forInfoDictionaryKey: "NiumaInstallOnLaunch") as? Bool == true,
    ManagedInstallation.shouldInstall(Bundle.main.bundleURL) {
@@ -33,8 +37,6 @@ if let existing = NSRunningApplication.runningApplications(withBundleIdentifier:
 }
 
 // 使用原生 accessory 生命周期，仅保留菜单栏与按需打开的设置窗口。
-let application = NSApplication.shared
-application.setActivationPolicy(.accessory)
 // 显式保留委托，确保应用运行期间菜单栏及回调保持有效。
 let delegate = AppDelegate()
 application.delegate = delegate

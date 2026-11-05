@@ -39,6 +39,8 @@ function render() {
   document.getElementById('update-status').textContent = [state.status, state.cleanupWarning].filter(Boolean).join('\n');
   document.getElementById('update-banner').hidden = !state.release;
   document.getElementById('update-download').hidden = !state.release;
+  document.getElementById('update-manual').hidden = !state.release || !window.__TAURI__?.core?.invoke;
+  document.getElementById('update-manual').disabled = state.installing;
   document.getElementById('update-notes').hidden = !state.release;
   document.getElementById('update-notes').textContent = state.release?.notes ?? '';
   document.getElementById('update-title').textContent = state.release ? `发现新版本 ${state.release.version}` : '';
@@ -115,6 +117,7 @@ export function initUpdates() {
   document.getElementById('check-updates').addEventListener('click', () => check(true));
   document.getElementById('update-download').addEventListener('click', installUpdate);
   document.getElementById('banner-download').addEventListener('click', installUpdate);
+  document.getElementById('update-manual').addEventListener('click', openDownload);
   document.getElementById('banner-details').addEventListener('click', () => document.getElementById('open-settings').click());
   window.addEventListener('focus', () => check());
   setInterval(() => check(), 86400000);

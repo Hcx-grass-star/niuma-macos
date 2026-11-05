@@ -1,5 +1,6 @@
 {
   "bundle": {
+    "icon": ["../Resources/AppIcon.icns"],
     "resources": {
       "../build/NiumaInstaller": "NiumaInstaller"
     },
