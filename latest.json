@@ -1,6 +1,6 @@
 {
-  "version": "0.2.0",
-  "notes": "本次提供 macOS 原生通用安装包，支持 Apple Silicon 与 Intel，最低 macOS 13。\n\n更新内容：\n- 展示当前班次已赚金额和本年预估已赚金额；本年金额按当前工资与排班回算。\n- 支持自动检测 GitHub 正式更新，每 24 小时最多自动检查一次，也可在设置中手动检查或关闭自动检查。\n- 发现新版后展示更新说明并跳转下载页面，安装由用户手动完成。\n- 修复打开设置时窗口可能被其他应用遮挡的问题。\n\n安装与升级：\n1. 下载下方 macOS universal ZIP 并解压。\n2. 从菜单栏退出正在运行的旧版，将新版“牛马上班.app”放入“应用程序”文件夹；已有同名应用时选择替换。\n3. 重新打开应用。工资与排班配置保存在应用包外，替换应用时保留。\n\n此安装包使用临时签名，尚未经过 Apple 公证。首次打开若被系统拦截，请按包内“安装说明.txt”操作。\n\n验证：收入核心测试、Swift 收入集成与更新检查 HTTP 测试通过；已构建 arm64 和 x86_64 通用包并校验签名。本次未提供 Windows 安装包；macOS 13/Intel 实机及全屏、跨桌面场景未完成验收。\n",
-  "url": "https://github.com/Hcx-grass-star/niuma-macos/releases/tag/v0.2.0",
-  "macos": "https://github.com/Hcx-grass-star/niuma-macos/releases/download/v0.2.0/niuma-0.2.0-macOS-universal.zip"
+  "version": "0.2.1",
+  "notes": "修复 0.2.0 检查更新时容易遇到 GitHub 匿名 API 限流的问题。\n\n- 原生 macOS 与跨平台共享检查逻辑优先读取静态版本清单，主源正常时不调用 GitHub API。\n- 静态清单不可用或内容无效时回退 GitHub API；双源失败继续明确提示，不影响收入计算。\n- 保留每天一次自动检查、自动检查开关、手动检查、版本说明和手动下载方式。\n- 下载地址只接受本仓库正式发布及匹配版本的平台安装包，客户端不嵌入 Token。\n\n升级：旧 0.2.0 仍使用原来的检查逻辑，这次请手动下载下方 ZIP，解压后先退出旧应用，再将新版“牛马上班.app”替换进“应用程序”，重新打开后确认设置中的版本为 0.2.1。工资和排班配置保留。\n\n本次附件为 macOS 13 及以上的 arm64/x86_64 通用包，使用临时签名；首次打开如被系统拦截，请按包内安装说明操作。收入回归、双源 HTTP 集成、真实线上静态源及前端 CSP/CORS 验证通过。Windows 原生安装包及 Intel/macOS 13 实机未验证，本次不提供 Windows 安装包。\n\n静态清单：https://hcx-grass-star.github.io/niuma-macos/latest.json\n",
+  "url": "https://github.com/Hcx-grass-star/niuma-macos/releases/tag/v0.2.1",
+  "macos": "https://github.com/Hcx-grass-star/niuma-macos/releases/download/v0.2.1/niuma-0.2.1-macOS-universal.zip"
 }
