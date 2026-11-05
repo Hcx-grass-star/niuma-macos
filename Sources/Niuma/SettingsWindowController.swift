@@ -29,6 +29,8 @@ final class SettingsWindowController: NSWindowController, NSTextFieldDelegate, N
     private let onSave: (WorkSettings) throws -> Void
     /// 用户确认后由应用先关闭自动启动，再清理配置。
     private let onReset: () throws -> Void
+    /// 与工资草稿独立的版本检查服务。
+    private let updates: UpdateController
     /// 窗口关闭时释放表单，降低后台常驻内存。
     var onClose: (() -> Void)?
     /// 月薪或日薪选择。
@@ -39,6 +41,10 @@ final class SettingsWindowController: NSWindowController, NSTextFieldDelegate, N
     private let salaryLabel = NSTextField(labelWithString: "每月工资（元）")
     /// 每周哪些日期开始一个班次。
     private var weekdays: [(Int, NSButton)] = []
+    /// 是否启用内置中国大陆节假日及调休覆盖。
+    private let chinaHoliday = NSButton(checkboxWithTitle: "按中国大陆节假日及调休安排", target: nil, action: nil)
+    /// 年度数据覆盖范围及缺失年份回退说明。
+    private let chinaHolidayStatus = NSTextField(wrappingLabelWithString: "")
     /// 班次开始时间输入。
     private let start = NSTextField(string: "09:00")
     /// 班次结束时间输入。
@@ -57,8 +63,14 @@ final class SettingsWindowController: NSWindowController, NSTextFieldDelegate, N
     private var restRows: [RestRow] = []
     /// 是否展示鼓励内容。
     private let cheer = NSButton(checkboxWithTitle: "显示鼓励文案", target: nil, action: nil)
-    /// 是否在系统菜单栏直接显示同一收入。
-    private let menuIncome = NSButton(checkboxWithTitle: "菜单栏显示当前收入", target: nil, action: nil)
+    /// 面板内三个独立显示开关，保存前只修改草稿。
+    private let currentIncomeVisible = NSButton(checkboxWithTitle: "当前已赚", target: nil, action: nil)
+    /// 是否在面板中显示本月累计金额。
+    private let monthlyIncomeVisible = NSButton(checkboxWithTitle: "本月预估已赚", target: nil, action: nil)
+    /// 是否在面板中显示本年累计金额。
+    private let yearlyIncomeVisible = NSButton(checkboxWithTitle: "本年预估已赚", target: nil, action: nil)
+    /// 菜单栏内容选择，保存后与详情面板使用相同金额。
+    private let menuIncome = NSPopUpButton()
     /// 系统管理的登录启动开关，不写入工资配置。
     private let login = NSButton(checkboxWithTitle: "登录后自动启动（立即生效）", target: nil, action: nil)
     /// 显示自动启动的实际系统状态。
@@ -67,14 +79,23 @@ final class SettingsWindowController: NSWindowController, NSTextFieldDelegate, N
     private let preview = NSTextField(wrappingLabelWithString: "填写后可预览当前收入。")
     /// 输入或保存失败的可见原因。
     private let errorLabel = NSTextField(wrappingLabelWithString: "")
+    /// 立即生效的自动检查偏好。
+    private let automaticUpdates = NSButton(checkboxWithTitle: "自动检测更新（立即生效）", target: nil, action: nil)
+    /// 当前检查状态，不显示或传输工资信息。
+    private let updateStatus = NSTextField(wrappingLabelWithString: "")
+    /// 手动检查入口，请求期间禁用。
+    private let checkUpdate = NSButton(title: "检查更新…", target: nil, action: nil)
+    /// 用户明确点击后下载、校验并原位安装新版。
+    private let downloadUpdate = NSButton(title: "安装更新", target: nil, action: nil)
 
     /// 根据现有设置创建独立草稿，并连接实际保存与重置操作。
-    init(settings: WorkSettings, dataPath: String,
+    init(settings: WorkSettings, dataPath: String, updates: UpdateController,
          onSave: @escaping (WorkSettings) throws -> Void, onReset: @escaping () throws -> Void) {
         original = settings
         self.dataPath = dataPath
         self.onSave = onSave
         self.onReset = onReset
+        self.updates = updates
         salary = settings.hideAmounts ? NSSecureTextField() : NSTextField()
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 450, height: 690),
                               styleMask: [.titled, .closable], backing: .buffered, defer: false)
@@ -117,7 +138,7 @@ final class SettingsWindowController: NSWindowController, NSTextFieldDelegate, N
         ])
         let title = label("工资与作息", size: 22, secondary: false)
         stack.addArrangedSubview(title)
-        stack.addArrangedSubview(label("只在本机保存，用于估算本班当前收入。"))
+        stack.addArrangedSubview(label("只在本机保存，用于估算当前及本年收入。"))
         payMode.addItems(withTitles: ["月薪", "日薪"])
         payMode.selectItem(at: original.payMode == .monthly ? 0 : 1)
         payMode.target = self
@@ -140,6 +161,14 @@ final class SettingsWindowController: NSWindowController, NSTextFieldDelegate, N
             dayRow.addArrangedSubview(button)
         }
         stack.addArrangedSubview(dayRow)
+        chinaHoliday.state = original.chinaHolidayEnabled ? .on : .off
+        chinaHoliday.target = self
+        chinaHoliday.action = #selector(updateHolidayStatus)
+        stack.addArrangedSubview(chinaHoliday)
+        chinaHolidayStatus.font = .systemFont(ofSize: 11)
+        chinaHolidayStatus.textColor = .secondaryLabelColor
+        stack.addArrangedSubview(chinaHolidayStatus)
+        updateHolidayStatus()
         start.stringValue = timeText(original.startMinute)
         end.stringValue = timeText(original.endMinute)
         start.setAccessibilityLabel("上班时间")
@@ -170,9 +199,20 @@ final class SettingsWindowController: NSWindowController, NSTextFieldDelegate, N
         monthlyOptions.addArrangedSubview(fixedRow)
         stack.addArrangedSubview(monthlyOptions)
         cheer.state = original.encouragement ? .on : .off
-        menuIncome.state = original.menuBarIncome ? .on : .off
+        menuIncome.addItems(withTitles: MenuBarDisplay.allCases.map { $0.title })
+        menuIncome.selectItem(at: MenuBarDisplay.allCases.firstIndex(of: original.menuBarDisplay) ?? 0)
+        stack.addArrangedSubview(label("收入面板显示", secondary: false))
+        currentIncomeVisible.state = original.showCurrentIncome ? .on : .off
+        monthlyIncomeVisible.state = original.showMonthlyIncome ? .on : .off
+        yearlyIncomeVisible.state = original.showYearlyIncome ? .on : .off
+        currentIncomeVisible.setAccessibilityIdentifier("showCurrentIncome")
+        monthlyIncomeVisible.setAccessibilityIdentifier("showMonthlyIncome")
+        yearlyIncomeVisible.setAccessibilityIdentifier("showYearlyIncome")
+        stack.addArrangedSubview(currentIncomeVisible)
+        stack.addArrangedSubview(monthlyIncomeVisible)
+        stack.addArrangedSubview(yearlyIncomeVisible)
         stack.addArrangedSubview(cheer)
-        stack.addArrangedSubview(menuIncome)
+        stack.addArrangedSubview(horizontal([label("菜单栏显示", secondary: false), menuIncome]))
         let separator = NSBox()
         separator.boxType = .separator
         stack.addArrangedSubview(separator)
@@ -183,9 +223,25 @@ final class SettingsWindowController: NSWindowController, NSTextFieldDelegate, N
         loginState.textColor = .secondaryLabelColor
         stack.addArrangedSubview(login)
         stack.addArrangedSubview(loginState)
+        stack.addArrangedSubview(label("应用更新 · 当前版本 " + updates.currentVersion, size: 13, secondary: false))
+        automaticUpdates.target = self
+        automaticUpdates.action = #selector(changeAutomaticUpdates)
+        checkUpdate.target = self
+        checkUpdate.action = #selector(checkUpdates)
+        downloadUpdate.target = self
+        downloadUpdate.action = #selector(openUpdateDownload)
+        updateStatus.font = .systemFont(ofSize: 11)
+        updateStatus.textColor = .secondaryLabelColor
+        updateStatus.setAccessibilityIdentifier("updateStatus")
+        stack.addArrangedSubview(automaticUpdates)
+        stack.addArrangedSubview(horizontal([checkUpdate, downloadUpdate]))
+        stack.addArrangedSubview(updateStatus)
+        stack.addArrangedSubview(label("启动时检查，此后每24小时最多自动检查一次；仅获取公开版本信息。"))
+        updates.onChange = { [weak self] in self?.renderUpdates() }
+        renderUpdates()
         preview.font = .systemFont(ofSize: 13, weight: .medium)
         stack.addArrangedSubview(preview)
-        stack.addArrangedSubview(label("保存后会重算本班收入，显示金额可能变化。"))
+        stack.addArrangedSubview(label("保存后会重算本班、本月及本年预估收入，显示金额可能变化。"))
         errorLabel.textColor = .systemRed
         errorLabel.setAccessibilityIdentifier("settingsError")
         errorLabel.isHidden = true
@@ -224,6 +280,23 @@ final class SettingsWindowController: NSWindowController, NSTextFieldDelegate, N
         row.spacing = 8
         return row
     }
+
+    /// 更新检查状态变化不会覆盖用户正在编辑的工资和作息。
+    private func renderUpdates() {
+        automaticUpdates.state = updates.automaticEnabled ? .on : .off
+        checkUpdate.isEnabled = !updates.isChecking
+        downloadUpdate.isHidden = updates.release == nil
+        updateStatus.stringValue = updates.status
+    }
+
+    /// 自动检查开关立即保存，独立于工资表单的保存与取消。
+    @objc private func changeAutomaticUpdates() { updates.setAutomaticEnabled(automaticUpdates.state == .on) }
+
+    /// 手动检查绕过每日自动检查间隔，但不并发重复请求。
+    @objc private func checkUpdates() { updates.check(manual: true) }
+
+    /// 交给签名更新器替换当前应用，工资及作息配置不参与安装。
+    @objc private func openUpdateDownload() { updates.installUpdate() }
 
     /// 用 HH:mm 形式展示本地分钟时刻。
     private func timeText(_ minute: Int) -> String { String(format: "%02d:%02d", minute / 60, minute % 60) }
@@ -280,8 +353,13 @@ final class SettingsWindowController: NSWindowController, NSTextFieldDelegate, N
             throw SettingsError.invalidDivisor
         }
         settings.fixedDays = Decimal(string: fixedDays.stringValue, locale: Locale(identifier: "en_US_POSIX"))
+        settings.showCurrentIncome = currentIncomeVisible.state == .on
+        settings.showMonthlyIncome = monthlyIncomeVisible.state == .on
+        settings.showYearlyIncome = yearlyIncomeVisible.state == .on
         settings.encouragement = cheer.state == .on
-        settings.menuBarIncome = menuIncome.state == .on
+        settings.menuBarDisplay = MenuBarDisplay.allCases[menuIncome.indexOfSelectedItem]
+        settings.menuBarIncome = settings.menuBarDisplay != .icon
+        settings.chinaHolidayEnabled = chinaHoliday.state == .on
         try settings.validate()
         return settings
     }
@@ -300,6 +378,15 @@ final class SettingsWindowController: NSWindowController, NSTextFieldDelegate, N
             let note = monthly && settings.divisorMode == .schedule ? "；本月排班 " + String(engine.workdays(in: Date(), settings: settings)) + " 天" : ""
             preview.stringValue = "当前收入预览：" + income + note
         } catch { preview.stringValue = "填写有效工资和作息后可预览当前收入。" }
+    }
+
+    /// 显示内置年度数据覆盖范围，并明确缺失年份的回退规则。
+    @objc private func updateHolidayStatus() {
+        let year = Calendar.autoupdatingCurrent.component(.year, from: Date())
+        chinaHolidayStatus.stringValue = chinaHoliday.state == .on
+            ? (ChinaHolidayCalendar.hasData(for: year) ? "已内置 \(year) 年官方安排；未内置年份按每周排班计算。" : "\(year) 年安排缺失，将按每周排班计算。")
+            : "已内置 2026 年官方安排；未内置年份按每周排班计算。"
+        updatePreview()
     }
 
     /// 任何文本变更只刷新预览，不打断用户输入。
@@ -352,7 +439,7 @@ final class SettingsWindowController: NSWindowController, NSTextFieldDelegate, N
     @objc private func reset() {
         let alert = NSAlert()
         alert.messageText = "清除设置并重置？"
-        alert.informativeText = "将删除本应用的工资、作息和显示偏好，并关闭登录自动启动。应用本体和其他文件不会被删除。"
+        alert.informativeText = "将删除本应用的工资、作息、显示及更新检查偏好，并关闭登录自动启动。应用本体和其他文件不会被删除。"
         alert.addButton(withTitle: "取消")
         alert.addButton(withTitle: "清除并重置")
         guard alert.runModal() == .alertSecondButtonReturn else { return }

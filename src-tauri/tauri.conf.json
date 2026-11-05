@@ -1,13 +1,13 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "牛马上班",
-  "version": "0.2.0",
+  "version": "0.3.1",
   "identifier": "com.hcxgrassstar.niuma",
   "build": {
     "frontendDist": "../frontend",
     "devUrl": "http://localhost:1420",
     "beforeDevCommand": "npm run sync:frontend",
-    "beforeBuildCommand": "npm run sync:frontend"
+    "beforeBuildCommand": "node scripts/prepare-tauri.mjs"
   },
   "app": {
     "withGlobalTauri": true,
@@ -20,15 +20,45 @@
         "minWidth": 340,
         "minHeight": 560,
         "resizable": false,
+        "decorations": false,
         "center": true,
         "visible": true
       }
     ],
-    "security": { "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:; connect-src ipc: http://ipc.localhost" }
+    "security": {
+      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:; connect-src ipc: http://ipc.localhost https://api.github.com https://hcx-grass-star.github.io"
+    }
   },
   "bundle": {
     "active": true,
     "targets": "all",
-    "icon": ["icons/icon.png"]
+    "icon": [
+      "icons/icon.png",
+      "icons/icon.ico"
+    ],
+    "windows": {
+      "wix": {
+        "language": "zh-CN"
+      },
+      "nsis": {
+        "installMode": "currentUser",
+        "languages": [
+          "SimpChinese"
+        ]
+      },
+      "allowDowngrades": false
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDIwMjFEQUE1NjhGMEIyNkEKUldScXN2Qm9wZG9oSUxUN1QvK2hMUXBBK1V3S0hCK3RWeUdHMHhoQmVwVnlxRDNVbFo2b0gwY3oK",
+      "endpoints": [
+        "https://hcx-grass-star.github.io/niuma-macos/tauri-updater.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      },
+      "requireSignedVersion": true
+    }
   }
 }

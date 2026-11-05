@@ -5,8 +5,13 @@ import NiumaCore
 @main
 struct SalaryFlowIntegrationTests {
     /// 执行真实存储和计算的集成用例，任何失败都返回非零退出码。
-    static func main() {
+    static func main() async {
         let suite = SalaryFlowIntegrationTests()
+        if CommandLine.arguments.contains("--month-fixtures") {
+            do { try suite.exportMonthFixtures() }
+            catch { print("本月样例导出失败"); exit(1) }
+            return
+        }
         let cases: [(String, () throws -> Void)] = [
             ("月薪及休息边界", suite.testMonthlySavedScheduleAndRestBoundaries),
             ("日薪、折算及带薪休息", suite.testDailyFixedDivisorAndPaidBreak),
@@ -15,15 +20,50 @@ struct SalaryFlowIntegrationTests {
             ("无效保存保护旧设置", suite.testInvalidSavePreservesPreviousSettings),
             ("重置及损坏配置", suite.testResetAndCorruptFileRecovery),
             ("多段休息及下次状态边界", suite.testMultipleRestsAndNextBoundary),
-            ("夏令时歧义拒绝", suite.testDaylightSavingAmbiguity)
+            ("夏令时歧义拒绝", suite.testDaylightSavingAmbiguity),
+            ("本年预估收入", suite.testYearToDateAmount),
+            ("年度回算边界", suite.testYearToDateBoundaries),
+            ("中国节假日及调休", suite.testChinaHolidaySchedule),
+            ("本月收入与菜单栏选择", suite.testMonthIncome),
+            ("收入面板显示偏好", suite.testIncomeVisibility)
         ]
         var failures = 0
         for (name, run) in cases {
             do { try run(); print("PASS: " + name) }
             catch { failures += 1; print("FAIL: " + name + " — " + error.localizedDescription) }
         }
+        do { try await UpdateIntegrationTests.run() }
+        catch { failures += 1; print("FAIL: 更新检查 — " + error.localizedDescription) }
         guard failures == 0 else { exit(1) }
-        print("全部 " + String(cases.count) + " 组集成验证通过。")
+        print("全部 " + String(cases.count) + " 组收入集成与更新检查验证通过。")
+    }
+
+    /// 向跨运行时验证脚本输出受控时间的统计值，不读取用户配置或系统时钟。
+    private func exportMonthFixtures() throws {
+        var output: [[String: Any]] = []
+        for profile in 0..<4 {
+            var settings = monthly()
+            if profile == 1 {
+                settings.weekdays = Set(1...7)
+                settings.salary = 31000
+                settings.startMinute = 1320
+                settings.endMinute = 360
+                settings.rests = []
+            }
+            if profile == 2 { settings.chinaHolidayEnabled = true }
+            if profile == 3 { settings.divisorMode = .fixed; settings.fixedDays = 22 }
+            for (index, point) in [(2026, 1, 4, 14), (2026, 2, 1, 2), (2026, 11, 4, 14), (2026, 12, 31, 23), (2027, 1, 1, 2), (2024, 3, 1, 0)].enumerated() {
+                let now = date(point.2, point.3, month: point.1, year: point.0)
+                let snapshot = try persistedSnapshot(settings, at: now)
+                output.append([
+                    "id": String(profile) + ":" + String(index),
+                    "month": NSDecimalNumber(decimal: snapshot.monthToDateAmount!).doubleValue,
+                    "year": NSDecimalNumber(decimal: snapshot.yearToDateAmount!).doubleValue
+                ])
+            }
+        }
+        let data = try JSONSerialization.data(withJSONObject: output, options: [.sortedKeys])
+        print(String(decoding: data, as: UTF8.self))
     }
 
     /// 样例固定使用上海时区，避免运行机器时区影响断言。
@@ -34,8 +74,8 @@ struct SalaryFlowIntegrationTests {
     }
 
     /// 构造验收样例的明确本地日期，绝不修改系统时钟。
-    private func date(_ day: Int, _ hour: Int, _ minute: Int = 0, month: Int = 11) -> Date {
-        calendar.date(from: DateComponents(year: 2026, month: month, day: day, hour: hour, minute: minute))!
+    private func date(_ day: Int, _ hour: Int, _ minute: Int = 0, month: Int = 11, year: Int = 2026) -> Date {
+        calendar.date(from: DateComponents(year: year, month: month, day: day, hour: hour, minute: minute))!
     }
 
     /// 使用独立临时目录模拟保存后重启，再按指定时刻计算收入。
@@ -57,6 +97,14 @@ struct SalaryFlowIntegrationTests {
     /// 对内部未舍入金额仅在断言显示结果时取两位小数。
     private func amount(_ snapshot: IncomeSnapshot) -> Decimal? {
         guard var value = snapshot.amount else { return nil }
+        var result = Decimal()
+        NSDecimalRound(&result, &value, 2, .plain)
+        return result
+    }
+
+    /// 对本年累计金额使用与当前金额相同的两位小数展示规则。
+    private func amount(_ value: Decimal?) -> Decimal? {
+        guard var value else { return nil }
         var result = Decimal()
         NSDecimalRound(&result, &value, 2, .plain)
         return result
@@ -168,6 +216,163 @@ struct SalaryFlowIntegrationTests {
         try expectEqual(ended.nextBoundary, date(5, 9))
     }
 
+    /// 本年金额按当前配置回算，包含已完成班次和当前班次的已计薪部分。
+    func testYearToDateAmount() throws {
+        let working = try persistedSnapshot(monthly(), at: date(4, 14))
+        try expectEqual(amount(working.yearToDateAmount), Decimal(212500))
+        let offDay = try persistedSnapshot(monthly(), at: date(8, 14))
+        try expectEqual(offDay.phase, .off)
+        try expectEqual(amount(offDay.yearToDateAmount), Decimal(215000))
+        try expectNil(try IncomeEngine(calendar: calendar).evaluate(nil, at: date(4, 14)).yearToDateAmount)
+        var changed = monthly()
+        changed.salary = 42000
+        try expectEqual(amount(try persistedSnapshot(changed, at: date(4, 14)).yearToDateAmount), 425000)
+    }
+
+    /// 验证年度截断、闰日、固定折算与休息扣除，不依赖真实系统日期。
+    func testYearToDateBoundaries() throws {
+        var settings = monthly()
+        settings.payMode = .daily
+        settings.salary = 800
+        for (hour, minute, expected) in [(0, 0, 0), (12, 0, 300), (12, 30, 300), (18, 0, 800)] {
+            let result = try persistedSnapshot(settings, at: date(1, hour, minute, month: 1))
+            try expectEqual(amount(result.yearToDateAmount), Decimal(expected))
+        }
+        let yearEnd = try persistedSnapshot(settings, at: date(31, 20, month: 12))
+        try expectEqual(yearEnd.nextBoundary, date(1, 0, month: 1, year: 2027))
+        settings.weekdays = Set(1...7)
+        let leap = try persistedSnapshot(settings, at: date(1, 9, month: 3, year: 2024))
+        try expectEqual(amount(leap.yearToDateAmount), 48000)
+        settings.payMode = .monthly
+        settings.salary = 31000
+        let february = try persistedSnapshot(settings, at: date(1, 14, month: 2))
+        try expectEqual(amount(february.yearToDateAmount), Decimal(string: "31553.57"))
+        settings.startMinute = 1320
+        settings.endMinute = 360
+        settings.rests = []
+        let midnight = try persistedSnapshot(settings, at: date(1, 0, month: 1))
+        try expectEqual(amount(midnight.yearToDateAmount), 0)
+        let overnight = try persistedSnapshot(settings, at: date(1, 2, month: 1))
+        try expectEqual(amount(overnight), 500)
+        try expectEqual(amount(overnight.yearToDateAmount), 250)
+        settings.rests = [.init(start: 0, end: 60)]
+        let resting = try persistedSnapshot(settings, at: date(1, 0, 30, month: 1))
+        try expectEqual(amount(resting.yearToDateAmount), 0)
+        settings = monthly()
+        settings.salary = 22000
+        settings.divisorMode = .fixed
+        settings.fixedDays = 22
+        let fixed = try persistedSnapshot(settings, at: date(2, 14, month: 1))
+        try expectEqual(amount(fixed.yearToDateAmount), 1500)
+    }
+
+    /// 第一期：2026 官方放假、补班覆盖每周排班，2027 缺失时回退每周排班。
+    func testChinaHolidaySchedule() throws {
+        var settings = monthly()
+        settings.chinaHolidayEnabled = true
+        try expectEqual(IncomeEngine(calendar: calendar).workdays(in: date(1, 12, month: 1, year: 2026), settings: settings), 21)
+        let holiday = try persistedSnapshot(settings, at: date(1, 14, month: 1, year: 2026))
+        try expectEqual(holiday.phase, .off)
+        try expectEqual(holiday.scheduleReason, "节假日休息")
+        let makeup = try persistedSnapshot(settings, at: date(4, 14, month: 1, year: 2026))
+        try expectEqual(makeup.phase, .working)
+        try expectEqual(amount(makeup), 500)
+        try expectEqual(makeup.scheduleReason, "调休上班")
+        let missingYear = try persistedSnapshot(settings, at: date(1, 14, month: 1, year: 2027))
+        try expectEqual(missingYear.phase, .working)
+        try expectEqual(missingYear.scheduleReason, "2027年安排缺失，按每周排班")
+        let longHoliday = try persistedSnapshot(settings, at: date(15, 12, month: 2))
+        try expectEqual(longHoliday.nextBoundary, date(24, 9, month: 2))
+        settings.chinaHolidayEnabled = false
+        try expectEqual(try persistedSnapshot(settings, at: date(1, 14, month: 1, year: 2026)).phase, .working)
+    }
+
+    /// 本月金额跨月跨年截断，菜单栏切换保存重载，隐私状态优先于指标选择。
+    func testMonthIncome() throws {
+        var settings = monthly()
+        let snapshot = try persistedSnapshot(settings, at: date(4, 14))
+        try expectEqual(amount(snapshot.monthToDateAmount), 2500)
+        try expectEqual(amount(try persistedSnapshot(settings, at: date(4, 12)).monthToDateAmount), 2375)
+        try expectEqual(amount(try persistedSnapshot(settings, at: date(4, 12, 30)).monthToDateAmount), 2375)
+        try expectEqual(amount(try persistedSnapshot(settings, at: date(4, 18)).monthToDateAmount), 3000)
+        var changed = settings
+        changed.salary = 42000
+        try expectEqual(amount(try persistedSnapshot(changed, at: date(4, 14)).monthToDateAmount), 5000)
+        changed.payMode = .daily
+        changed.salary = 800
+        try expectEqual(amount(try persistedSnapshot(changed, at: date(4, 14)).monthToDateAmount), 2000)
+        changed = settings
+        changed.divisorMode = .fixed
+        changed.fixedDays = 22
+        try expectEqual(amount(try persistedSnapshot(changed, at: date(4, 14)).monthToDateAmount), Decimal(string: "2386.36"))
+        settings.menuBarDisplay = .month
+        try expectEqual(amount(settings.menuBarAmount(in: snapshot)), 2500)
+        settings.menuBarDisplay = .current
+        try expectEqual(amount(settings.menuBarAmount(in: snapshot)), 500)
+        settings.menuBarDisplay = .icon
+        try expectNil(settings.menuBarAmount(in: snapshot))
+        settings.menuBarDisplay = .month
+        settings.hideAmounts = true
+        try expectNil(settings.menuBarAmount(in: snapshot))
+        settings.hideAmounts = false
+        let off = try persistedSnapshot(settings, at: date(8, 14))
+        try expectEqual(amount(settings.menuBarAmount(in: off)), 5000)
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("niuma-menu-test-" + UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = SettingsStore(directory: directory)
+        try store.save(settings)
+        try expectEqual(try SettingsStore(directory: directory).load()?.menuBarDisplay, .month)
+        var old = try JSONSerialization.jsonObject(with: JSONEncoder().encode(settings)) as! [String: Any]
+        old.removeValue(forKey: "menuBarDisplay")
+        old["menuBarIncome"] = true
+        var loaded = try JSONDecoder().decode(WorkSettings.self, from: JSONSerialization.data(withJSONObject: old))
+        try expectEqual(loaded.menuBarDisplay, .current)
+        old["menuBarIncome"] = false
+        loaded = try JSONDecoder().decode(WorkSettings.self, from: JSONSerialization.data(withJSONObject: old))
+        try expectEqual(loaded.menuBarDisplay, .icon)
+        settings.weekdays = Set(1...7)
+        settings.salary = 31000
+        settings.startMinute = 1320
+        settings.endMinute = 360
+        settings.rests = []
+        let february = try persistedSnapshot(settings, at: date(1, 2, month: 2))
+        try expectEqual(amount(february), 500)
+        try expectEqual(amount(february.monthToDateAmount), 250)
+        try expectEqual(amount(try persistedSnapshot(settings, at: date(1, 0, month: 2)).monthToDateAmount), 0)
+        let january = try persistedSnapshot(settings, at: date(1, 2, month: 1))
+        try expectEqual(amount(january.monthToDateAmount), amount(january.yearToDateAmount))
+        settings.payMode = .daily
+        settings.salary = 800
+        settings.startMinute = 540
+        settings.endMinute = 1080
+        try expectEqual(amount(try persistedSnapshot(settings, at: date(29, 18, month: 2, year: 2024)).monthToDateAmount), 23200)
+        try expectNil(try IncomeEngine(calendar: calendar).evaluate(nil, at: date(4, 14)).monthToDateAmount)
+    }
+
+    /// 三项显示偏好独立保存重载，旧配置默认全开，显示选择不改变金额或菜单栏指标。
+    func testIncomeVisibility() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("niuma-display-test-" + UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = SettingsStore(directory: directory)
+        for mask in 0..<8 {
+            var settings = monthly()
+            settings.showCurrentIncome = mask & 1 != 0
+            settings.showMonthlyIncome = mask & 2 != 0
+            settings.showYearlyIncome = mask & 4 != 0
+            settings.menuBarDisplay = .month
+            try store.save(settings)
+            let loaded = try SettingsStore(directory: directory).load()!
+            try expectEqual(loaded, settings)
+            let snapshot = try IncomeEngine(calendar: calendar).evaluate(loaded, at: date(4, 14))
+            try expectEqual(amount(snapshot), 500)
+            try expectEqual(amount(loaded.menuBarAmount(in: snapshot)), 2500)
+        }
+        var old = try JSONSerialization.jsonObject(with: JSONEncoder().encode(monthly())) as! [String: Any]
+        for key in ["showCurrentIncome", "showMonthlyIncome", "showYearlyIncome"] { old.removeValue(forKey: key) }
+        let loaded = try JSONDecoder().decode(WorkSettings.self, from: JSONSerialization.data(withJSONObject: old))
+        try expectTrue(loaded.showCurrentIncome && loaded.showMonthlyIncome && loaded.showYearlyIncome)
+    }
+
     /// 非上海时区遇到重复或不存在的钟表时间时必须明确拒绝。
     func testDaylightSavingAmbiguity() throws {
         var clock = Calendar(identifier: .gregorian)
@@ -194,8 +399,8 @@ struct CheckFailure: Error, LocalizedError {
 }
 
 /// 比较集成链路的实际结果和明确的需求期望。
-func expectEqual<T: Equatable>(_ actual: T, _ expected: T) throws {
-    guard actual == expected else { throw CheckFailure(message: "实际结果与期望不一致") }
+func expectEqual<T: Equatable>(_ actual: T, _ expected: T, line: UInt = #line) throws {
+    guard actual == expected else { throw CheckFailure(message: "实际结果与期望不一致（用例行 \(line)）") }
 }
 
 /// 验证没有收入或配置时，结果确实为空。
