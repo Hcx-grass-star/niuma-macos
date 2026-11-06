@@ -56,6 +56,8 @@ swift run --disable-automatic-resolution NiumaIntegrationTests
 
 ## 打包分享
 
+开发与发布须遵守 [项目开发规范](AGENTS.md) 和 [发布与更新](docs/发布与更新.md)：正式发布默认建立对应的 `release/<版本号>` 分支，或先合并到 `main`，完成远端源码归档后才能报告发布完成。
+
 ```bash
 # 生成 dist/牛马上班-<版本>-macOS-universal.zip，内含 .app 与「安装说明.txt」。
 bash scripts/package-release.sh
