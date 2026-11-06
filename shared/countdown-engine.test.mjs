@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { nextIncomeBoundary } from './income-engine.mjs';
 import { evaluateCountdowns, validateCountdowns, nextRefreshDelay, menuCountdownText } from './countdown-engine.mjs';
 
@@ -34,14 +35,15 @@ assert.equal(evaluateCountdowns(fixed, null, new Date(events[0].targetAt + 1000)
 assert.equal(evaluateCountdowns([{ ...events[0], enabled: false }], null, now).length, 0);
 assert.throws(() => validateCountdowns(Array.from({length:21}, (_, i) => ({ ...events[0], id:String(i) }))), /20/);
 assert.throws(() => validateCountdowns([events[0],events[0]]), /标识/);
-const priorTZ = process.env.TZ;
-try {
-  process.env.TZ = 'America/New_York';
-  const results = evaluateCountdowns(events, { ...schedule, weekdays:[0,1,2,3,4,5,6], start:'00:30', end:'01:30' }, new Date(2026,10,1,0));
+// Windows 的进程时区切换会污染后续 Date 断言；独立进程只验证夏令时故障隔离。
+execFileSync(process.execPath, ['--input-type=module', '--eval', `
+  import assert from 'node:assert/strict';
+  import { evaluateCountdowns } from ${JSON.stringify(new URL('./countdown-engine.mjs', import.meta.url).href)};
+  const results = evaluateCountdowns(${JSON.stringify(events)}, { ...${JSON.stringify(schedule)}, weekdays:[0,1,2,3,4,5,6], start:'00:30', end:'01:30' }, new Date(2026,10,1,0));
   assert.equal(results.find(s => s.id === 'b').phase,'unavailable');
   assert.match(results.find(s => s.id === 'b').unavailableReason,/重复/);
   assert.equal(results.find(s => s.id === 'a').phase,'pending');
-} finally { if (priorTZ == null) delete process.env.TZ; else process.env.TZ = priorTZ; }
+`], { env: { ...process.env, TZ: 'America/New_York' }, stdio: 'pipe' });
 console.log('PASS: 数量上限、重复标识、关闭项、时间校正和夏令时故障隔离');
 
 assert.equal(nextIncomeBoundary({ ...schedule, rests:[{start:'12:00',end:'13:00'}] }, now), new Date(2026,10,6,18).getTime());
