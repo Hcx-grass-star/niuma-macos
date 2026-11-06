@@ -1,7 +1,7 @@
 {
-  "version": "0.3.2",
-  "notes": "本次主要优化 macOS 原生版的资源占用，同时完善正式版、开发版和测试版的环境隔离。\n\n- 收入面板改为按需创建的轻量原生窗口，关闭后释放内容视图；保留收入展示、隐私开关、设置和关闭入口。\n- 复用金额格式化器和最多 32 项的排班计数，减少持续刷新时的重复计算和内存分配；菜单文字、字体和布局只在需要时更新。\n- 时间环境变化后重建收入引擎；工资、排班、节假日开关变化及缓存淘汰均有集成验证。\n- 正式版、开发版与测试版显示明确环境名称；非正式版使用独立应用身份与配置目录，并禁止注册登录自启动。正式发布包沿用原有身份、工资配置和更新链路。\n- Windows 同步版本为 0.3.2，保持现有桌面宠物和收入展示功能；本次原生资源优化针对 macOS Swift/AppKit 版。\n\n验证：跨平台收入核心、Swift 15 组收入与环境集成、真实本地 HTTP 更新检查、原生窗口交互及释放、安装文件事务、macOS 真实进程覆盖升级/失败回滚、Sparkle 签名拒绝和成功更新均通过。Windows GitHub 托管 runner 已通过 NSIS 0.2.1→0.3.2 升级，确认安装路径、唯一卸载项和原有数据保留。\n\n资源限制：开发阶段短时测试显示常用模式资源占用下降，但关闭设置后的后台内存仍可能超过 30 MB；未声称始终低于 30 MB，也未完成所有模式的长窗口或 8 小时稳定性验收。原生交互复验首次未检出设置窗口，保留诊断后的复跑通过；不将复跑掩盖为从未出现问题。\n\nmacOS 包支持 Apple Silicon 与 Intel，最低 macOS 13，使用临时签名且未经 Apple 公证，首次打开可能需要在系统设置批准。Windows MSI 尚未在真实 Windows 机器上完成独立交互验收。安装前后均应保留自己的工资与排班配置。\n",
-  "url": "https://github.com/Hcx-grass-star/niuma-macos/releases/tag/v0.3.2",
-  "macos": "https://github.com/Hcx-grass-star/niuma-macos/releases/download/v0.3.2/niuma-0.3.2-macOS-universal.zip",
-  "windows": "https://github.com/Hcx-grass-star/niuma-macos/releases/download/v0.3.2/niuma-0.3.2-Windows-x64-setup.exe"
+  "version": "0.3.3",
+  "notes": "本次修复 macOS 收入面板展开与圆角问题，并新增可选原生液态玻璃和外观配置。\n\n- 调整菜单栏面板的焦点处理，展开不再依赖应用激活请求；保留再次点击、Esc 和失焦收起的交互路径。\n- 恢复 12pt 圆角、透明边角与窗口阴影。\n- 设置新增“面板外观”：原生液态玻璃开关、跟随系统/浅色/深色，以及自定义染色；保存后应用，取消保留旧配置。\n- macOS 26 及以上可使用原生液态玻璃；旧系统和要求降低透明度、提高对比度的辅助功能设置下使用普通背景。玻璃默认关闭，仅在收入面板展开时创建，收起后释放视图。\n- 保留既有工资、排班和收入计算；旧配置缺少外观字段时沿用普通背景与系统主题。Windows 同步版本号，保留现有功能，本次外观变更仅针对原生 macOS 版。\n\n验证：共享收入核心、Swift 16 组收入/外观配置及真实本地 HTTP 更新检查、安装文件事务，以及原生外观控件的保存/取消/重载、材质类型和视图释放检查通过。macOS 隔离真实进程的覆盖升级/失败回滚，以及 Sparkle 坏签名拒绝和成功更新/重启检查通过。Windows 托管 runner 已通过 NSIS 0.2.1→0.3.3 升级，确认同一安装路径、唯一卸载项、旧程序替换和原有数据保留。\n\n已知限制：真实鼠标端到端操作、实际桌面上的玻璃视觉效果、macOS 13–25 真机回退尚未完成验收。自动化窗口检查曾受失焦影响而失败，完整外观配置链路最终通过。短时设置→玻璃面板测试约 41 MB；关闭设置或玻璃后仍可能超过 30 MB，未承诺所有模式的后台占用始终低于 30 MB。玻璃默认关闭，可按资源偏好选择普通背景。\n\nmacOS 安装包包含 Apple Silicon 与 Intel，最低 macOS 13；采用临时签名，未经 Apple 公证。Windows MSI 尚未完成真实机器上的独立交互验收。\n",
+  "url": "https://github.com/Hcx-grass-star/niuma-macos/releases/tag/v0.3.3",
+  "macos": "https://github.com/Hcx-grass-star/niuma-macos/releases/download/v0.3.3/niuma-0.3.3-macOS-universal.zip",
+  "windows": "https://github.com/Hcx-grass-star/niuma-macos/releases/download/v0.3.3/niuma-0.3.3-Windows-x64-setup.exe"
 }
