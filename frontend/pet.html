@@ -21,7 +21,8 @@
       <time id="pet-clock" hidden></time>
       <p id="pet-custom-text" hidden></p>
     </section>
-    <div class="mascot" data-tauri-drag-region title="拖动小牛，移动浮窗">
+    <div class="mascot" data-tauri-drag-region title="拖动宠物，移动浮窗">
+      <div id="pet-sprite" class="pet-sprite" aria-label="Codex 桌面宠物" role="img" hidden></div>
       <svg viewBox="0 0 160 140" aria-label="陪你上班的小牛" role="img" data-tauri-drag-region>
         <ellipse class="ground" cx="80" cy="130" rx="43" ry="5" />
         <g class="cow">
@@ -46,7 +47,13 @@
     <button id="pet-only-settings" class="only-settings" type="button" aria-label="设置显示内容" title="设置显示内容">⚙</button>
   </main>
   <form id="pet-preferences" class="pet-preferences" aria-label="浮窗显示设置" hidden>
-    <h1>显示内容</h1>
+    <h1>桌面宠物</h1>
+    <section class="pet-resource-import" aria-label="宠物资源">
+      <strong id="pet-resource-name">内置牛马</strong>
+      <p id="pet-resource-status" role="status">支持导入 Codex v2 宠物资源包（ZIP）。</p>
+      <input id="pet-import-input" type="file" accept=".zip,application/zip" hidden />
+      <button id="pet-import" type="button">导入 Codex 宠物</button>
+    </section>
     <fieldset id="pet-item-fields"><legend>自由勾选组合</legend></fieldset>
     <label for="pet-text-input">自定义文字（选填，最多40字）</label>
     <textarea id="pet-text-input" maxlength="40" rows="2" placeholder="例如：今天也要好好生活"></textarea>

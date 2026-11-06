@@ -29,6 +29,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var settingsWindow: SettingsWindowController?
     /// 至多一个刷新任务，隐藏且仅图标时为空。
     private var refreshTimer: Timer?
+    /// 复用倒计时计算器，避免每次刷新重新创建日历状态。
+    private var countdownEngine = CountdownEngine()
     /// 独立配置避免改变旧工资格式。
     private var countdowns = CountdownPreferences()
     /// 仅在编辑期间持有倒计时窗口。
@@ -41,6 +43,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var configurationError: String?
     /// 独立于工资计算的公开版本检查和检查偏好。
     private let updates: UpdateController
+    /// 上一次写入菜单栏的标题，避免相同内容触发重绘。
+    private var lastStatusTitle: String?
+    /// 上一次写入菜单栏的提示文本，避免相同内容重复更新。
+    private var lastStatusToolTip: String?
+    /// 上一次写入菜单栏的无障碍标签，避免相同内容重复通知系统。
+    private var lastStatusAccessibilityLabel: String?
+    /// 上一次写入菜单栏的宽度，避免相同布局重复刷新。
+    private var lastStatusLength: CGFloat?
 
     /// 默认按包环境选择配置；集成验证可注入独立存储与更新偏好，避免修改用户数据。
     init(store: SettingsStore = SettingsStore(directory: FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -63,6 +73,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         item.button?.setAccessibilityLabel(AppBuildChannel.current.displayName)
         item.button?.image = NSImage(systemSymbolName: "leaf", accessibilityDescription: AppBuildChannel.current.displayName)
         item.button?.image?.isTemplate = true
+        item.button?.font = .monospacedDigitSystemFont(ofSize: 11, weight: .regular)
+        item.button?.imagePosition = .imageLeft
         statusItem = item
         configureMainMenu()
         NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(environmentChanged),
@@ -195,9 +207,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             snapshot = try! IncomeEngine().evaluate(nil, at: now)
             income?.render(snapshot, settings: settings, error: error.localizedDescription)
         }
-        let engine = CountdownEngine()
         let results: [CountdownSnapshot]
-        do { results = try engine.evaluate(countdowns.events, work: settings, at: now) }
+        do { results = countdowns.events.isEmpty ? [] : try countdownEngine.evaluate(countdowns.events, work: settings, at: now) }
         catch { income?.renderCountdowns([]); countdownError = error.localizedDescription; statusItem?.button?.toolTip = error.localizedDescription; return }
         income?.renderCountdowns(results)
         if let income, incomePanel.contentLayoutRect.size != income.preferredContentSize {
@@ -212,18 +223,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let countdownText = showCountdown ? primary?.menuText ?? "" : ""
         let fullText = [money, countdownText].filter { !$0.isEmpty }.joined(separator: " · ")
         if let item = statusItem, let button = item.button {
-            item.length = countdowns.menuWidth.map { CGFloat($0) } ?? NSStatusItem.variableLength
-            button.font = .monospacedDigitSystemFont(ofSize: 11, weight: .regular)
-            button.imagePosition = .imageLeft
+            let length = countdowns.menuWidth.map { CGFloat($0) } ?? NSStatusItem.variableLength
+            if lastStatusLength != length {
+                item.length = length
+                lastStatusLength = length
+            }
             let available = countdowns.menuWidth.map { max(24, $0 - 32) }
             let text = fittedMenuText(fullText, countdown: showCountdown ? primary : nil, width: available)
             let title = text.isEmpty ? "" : " " + text
-            if button.title != title { button.title = title }
-            button.toolTip = countdownError ?? (fullText.isEmpty ? "牛马上班 · 点击查看" : fullText)
-            button.setAccessibilityLabel(fullText.isEmpty ? "牛马上班" : fullText)
+            if lastStatusTitle != title {
+                button.title = title
+                lastStatusTitle = title
+            }
+            let toolTip = countdownError ?? (fullText.isEmpty ? "牛马上班 · 点击查看" : fullText)
+            if lastStatusToolTip != toolTip {
+                button.toolTip = toolTip
+                lastStatusToolTip = toolTip
+            }
+            let accessibilityLabel = fullText.isEmpty ? "牛马上班" : fullText
+            if lastStatusAccessibilityLabel != accessibilityLabel {
+                button.setAccessibilityLabel(accessibilityLabel)
+                lastStatusAccessibilityLabel = accessibilityLabel
+            }
         }
         let incomeVisible = ((income != nil && incomePanel.isVisible) || showIncome) && settings?.hideAmounts != true
-        var delay = engine.refreshDelay(results, panelVisible: (income != nil && incomePanel.isVisible), menuID: showCountdown ? primary?.event.id : nil, incomeActive: incomeVisible && snapshot.phase == .working)
+        var delay = countdownEngine.refreshDelay(results, panelVisible: (income != nil && incomePanel.isVisible), menuID: showCountdown ? primary?.event.id : nil, incomeActive: incomeVisible && snapshot.phase == .working)
         if incomeVisible, let boundary = snapshot.nextBoundary {
             let boundaryDelay = max(0.1, boundary.timeIntervalSince(now))
             delay = delay.map { min($0, boundaryDelay) } ?? boundaryDelay
@@ -284,6 +308,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     /// 唤醒、时区或系统时间变化时直接重新估算，不追赶计时器事件。
     @objc private func environmentChanged(_ notification: Notification) {
         incomeEngine = IncomeEngine()
+        countdownEngine = CountdownEngine()
         refresh()
         updates.check(manual: false)
     }

@@ -4,6 +4,22 @@ import { petItems, normalizePetPreferences, petPresentation } from './pet-displa
 const storageKey = 'niuma.settings.v1';
 /** 浮窗偏好独立保存，工资表单保存不会覆盖显示内容。 */
 const preferencesKey = 'niuma.pet.v1';
+/** Codex v2 标准动画行；状态变化时切换到对应动作，未知状态回退空闲。 */
+const spriteRows = { unconfigured: 0, before: 0, working: 7, resting: 6, finished: 8, off: 0 };
+/** 各动画行的有效帧数与帧时长，遵循 Codex v2 宠物资源契约。 */
+const spriteAnimations = {
+  0: { count: 6, durations: [280, 110, 110, 140, 140, 320] },
+  6: { count: 6, durations: [150, 150, 150, 150, 150, 260] },
+  7: { count: 6, durations: [120, 120, 120, 120, 120, 220] },
+  8: { count: 6, durations: [150, 150, 150, 150, 150, 280] },
+};
+/** 当前已加载的宠物图集对象 URL；切换资源时释放旧 URL，避免重复导入积累内存。 */
+let spriteObjectUrl = '';
+/** 当前 Codex 资源和动画状态。 */
+let customPet = null;
+let spriteFrame = 0;
+let spriteRow = 0;
+let spriteFrameStartedAt = 0;
 /** 读取主面板配置；无设置或损坏时只显示未配置状态。 */
 function readSettings() {
   try { return JSON.parse(localStorage.getItem(storageKey)); }
@@ -13,6 +29,65 @@ function readSettings() {
 function readPreferences() {
   try { return normalizePetPreferences(JSON.parse(localStorage.getItem(preferencesKey))); }
   catch { return normalizePetPreferences(null); }
+}
+/** 将 Rust 返回的图集字节转换为浏览器可渲染的临时 URL。 */
+function applyCustomPet(resource) {
+  if (spriteObjectUrl) URL.revokeObjectURL(spriteObjectUrl);
+  spriteObjectUrl = '';
+  customPet = resource;
+  if (resource?.spriteBytes?.length) {
+    spriteObjectUrl = URL.createObjectURL(new Blob([Uint8Array.from(resource.spriteBytes)], { type: 'image/webp' }));
+  }
+  const name = document.getElementById('pet-resource-name');
+  const status = document.getElementById('pet-resource-status');
+  name.textContent = resource?.displayName || '内置牛马';
+  status.textContent = resource ? `${resource.displayName} 已启用，可随时重新导入。` : '支持导入 Codex v2 宠物资源包（ZIP）。';
+  renderSprite(true);
+}
+/** 根据当前业务状态渲染 Codex 图集帧；没有导入资源时保留内置 SVG。 */
+function renderSprite(reset = false) {
+  const sprite = document.getElementById('pet-sprite');
+  const svg = document.querySelector('.mascot svg');
+  if (!customPet || !spriteObjectUrl) {
+    sprite.hidden = true; svg.hidden = false; return;
+  }
+  const phase = document.querySelector('.pet').dataset.phase || 'unconfigured';
+  const nextRow = spriteRows[phase] ?? 0;
+  if (reset || nextRow !== spriteRow) { spriteRow = nextRow; spriteFrame = 0; spriteFrameStartedAt = performance.now(); }
+  const animation = spriteAnimations[spriteRow] || spriteAnimations[0];
+  const now = performance.now();
+  if (now - spriteFrameStartedAt >= animation.durations[spriteFrame]) {
+    spriteFrame = (spriteFrame + 1) % animation.count;
+    spriteFrameStartedAt = now;
+  }
+  sprite.hidden = false; svg.hidden = true;
+  sprite.style.backgroundImage = `url(${spriteObjectUrl})`;
+  sprite.style.backgroundPosition = `${-spriteFrame * 142}px ${-spriteRow * 154}px`;
+}
+/** 从 Rust 读取上次激活的资源；读取失败时回退内置牛马并显示可理解提示。 */
+async function loadCustomPet() {
+  if (!window.__TAURI__?.core?.invoke) return;
+  try { applyCustomPet(await window.__TAURI__.core.invoke('load_codex_pet')); }
+  catch { document.getElementById('pet-resource-status').textContent = '已保存的宠物资源无法读取，当前使用内置牛马。'; }
+}
+/** 选择并导入 Codex ZIP；导入失败不覆盖当前已启用宠物。 */
+async function importCustomPet() {
+  const input = document.getElementById('pet-import-input');
+  input.click();
+  input.onchange = async () => {
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    const status = document.getElementById('pet-resource-status');
+    status.textContent = '正在校验并保存资源…';
+    try {
+      if (!window.__TAURI__?.core?.invoke) throw new Error('请在 Windows 应用中导入资源包。');
+      const bytes = Array.from(new Uint8Array(await file.arrayBuffer()));
+      applyCustomPet(await window.__TAURI__.core.invoke('import_codex_pet', { archive: bytes }));
+    } catch (error) {
+      status.textContent = typeof error === 'string' ? error : error?.message || '资源包导入失败，当前宠物未改变。';
+    }
+  };
 }
 /** 按真实时钟计算同一班次收入；系统休眠恢复后直接重算，不累加计时。 */
 function renderPet() {
@@ -29,6 +104,7 @@ function renderPet() {
   document.getElementById('pet-clock').hidden = !view.clock;
   document.getElementById('pet-custom-text').textContent = view.text;
   document.getElementById('pet-custom-text').hidden = !view.text;
+  renderSprite();
   const metrics = document.getElementById('pet-details');
   metrics.hidden = view.metrics.length === 0;
   metrics.classList.toggle('multiple', view.metrics.length > 1);
@@ -99,6 +175,7 @@ function initPreferences() {
   document.getElementById('pet-preferences').addEventListener('keydown', (event) => {
     if (event.key === 'Escape') { event.preventDefault(); closePreferences(); }
   });
+  document.getElementById('pet-import').addEventListener('click', importCustomPet);
 }
 /** 同步保存隐私开关，storage 事件通知主窗口；写入失败时不改变显示。 */
 function togglePrivacy() {
@@ -129,8 +206,10 @@ document.getElementById('pet-privacy').addEventListener('click', togglePrivacy);
 document.getElementById('pet-details').addEventListener('click', openDetails);
 document.getElementById('pet-close').addEventListener('click', hidePet);
 initPreferences();
+void loadCustomPet();
 window.addEventListener('storage', renderPet);
 window.addEventListener('focus', renderPet);
 document.addEventListener('visibilitychange', renderPet);
 renderPet();
 setInterval(renderPet, 1000);
+setInterval(() => renderSprite(), 40);

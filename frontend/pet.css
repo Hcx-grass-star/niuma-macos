@@ -25,9 +25,10 @@ button:focus-visible { outline: 2px solid #25845c; outline-offset: 2px; }
 #pet-clock { display: block; margin-top: 4px; font-size: 12px; font-variant-numeric: tabular-nums; color: #56715e; }
 #pet-custom-text { margin: 4px 0 0; font-size: 11px; line-height: 15px; overflow-wrap: anywhere; white-space: pre-wrap; }
 #pet-message { margin: 4px 0 0; font-size: 10px; line-height: 1.5; color: #70816f; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mascot { width: 142px; min-height: 40px; max-height: 124px; flex: 1; margin: 4px auto 0; cursor: grab; touch-action: none; }
+.mascot { width: 142px; min-height: 40px; max-height: 154px; flex: 1; margin: 4px auto 0; cursor: grab; touch-action: none; }
 .mascot:active { cursor: grabbing; }
 .mascot svg { display: block; width: 100%; height: 100%; pointer-events: none; }
+.pet-sprite { width: 142px; height: 154px; flex: 0 0 154px; background-repeat: no-repeat; background-size: 1136px 1694px; pointer-events: none; }
 .ground { fill: #173c2520; }
 .cow { transform-origin: 80px 130px; animation: breathe 3s ease-in-out infinite; }
 .body, .head { fill: #f2e4c6; stroke: #4d5945; stroke-width: 3; }
@@ -46,13 +47,17 @@ button:focus-visible { outline: 2px solid #25845c; outline-offset: 2px; }
 .drag-hint { display: block; text-align: center; font-size: 9px; color: #48613f; text-shadow: 0 1px 3px #fff; }
 .only-settings { display: none; position: absolute; right: 54px; top: 75px; width: 26px; height: 26px; border: 1px solid #d7e5d9; border-radius: 50%; background: #fcfff8; color: #56715e; }
 .only-pet { justify-content: center; }
-.only-pet .mascot { flex: none; height: 124px; }
+.only-pet .mascot { flex: none; height: 154px; }
 .only-pet .drag-hint { display: none; }
 /* 纯宠物模式仍保留键盘入口，悬停或获得焦点时显示配置按钮。 */
 .only-pet .only-settings { display: block; opacity: 0; }
 .only-pet:hover .only-settings, .only-settings:focus-visible { opacity: 1; }
 .pet-preferences { position: fixed; inset: 10px 12px; padding: 12px; overflow-y: auto; border: 1px solid #d7e5d9; border-radius: 16px; background: #fcfff8; font-size: 11px; }
 .pet-preferences h1 { margin: 0 0 6px; font-size: 15px; }
+.pet-resource-import { margin-bottom: 10px; padding: 8px; border: 1px solid #d7e5d9; border-radius: 10px; }
+.pet-resource-import strong { display: block; font-size: 12px; }
+.pet-resource-import p { margin: 3px 0 6px; color: #70816f; font-size: 10px; line-height: 14px; }
+.pet-resource-import button { padding: 5px 8px; border: 1px solid #bdcfbc; border-radius: 6px; background: #edf4e9; }
 .pet-preferences fieldset { display: grid; grid-template-columns: 1fr 1fr; gap: 5px 4px; margin: 0 0 8px; padding: 4px 0 0; border: 0; }
 .pet-preferences legend { padding: 0; color: #70816f; }
 .pet-preferences fieldset label { display: flex; align-items: center; gap: 4px; }

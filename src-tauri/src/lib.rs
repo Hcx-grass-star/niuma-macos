@@ -1,3 +1,10 @@
+use serde::{Deserialize, Serialize};
+use std::{
+    fs,
+    io::{Cursor, Read},
+    path::{Path, PathBuf},
+    time::{SystemTime, UNIX_EPOCH},
+};
 use tauri::{
     menu::{CheckMenuItem, MenuBuilder, MenuItem},
     tray::{MouseButton, TrayIconBuilder, TrayIconEvent},
@@ -34,7 +41,9 @@ pub fn run() {
             install_update,
             cleanup_old_versions,
             show_desktop_pet,
-            show_income_window
+            show_income_window,
+            import_codex_pet,
+            load_codex_pet
         ])
         .setup(|app| {
             // AppKit 初始化后，助手才可验证宿主进程的应用包身份。
@@ -140,6 +149,197 @@ fn show_desktop_pet(app: AppHandle) -> Result<(), String> {
 #[tauri::command]
 fn show_income_window(app: AppHandle) {
     show_main_window(&app);
+}
+
+/// Codex v2 宠物的最小元数据；额外字段会被忽略，以兼容未来资源包扩展。
+#[derive(Debug, Deserialize, Serialize)]
+struct CodexPetManifest {
+    /// 宠物稳定标识，用于应用数据目录名。
+    id: String,
+    /// 宠物在设置页和运行时展示的名称。
+    #[serde(rename = "displayName")]
+    display_name: String,
+    /// 宠物简介，当前用于导入成功提示。
+    #[serde(default)]
+    description: String,
+    /// Codex v2 图集版本号。
+    #[serde(rename = "spriteVersionNumber")]
+    sprite_version_number: u8,
+}
+
+/// 前端展示所需的已保存宠物资源；图集字节只通过 IPC 返回，不暴露文件路径。
+#[derive(Debug, Serialize)]
+struct CodexPetResource {
+    /// 宠物显示名称。
+    #[serde(rename = "displayName")]
+    display_name: String,
+    /// 宠物简介。
+    description: String,
+    /// WebP 图集字节，由前端创建短生命周期的 Blob URL。
+    #[serde(rename = "spriteBytes")]
+    sprite_bytes: Vec<u8>,
+}
+
+/// 导入 Codex v2 资源包并激活它；失败时不改变当前已激活资源。
+#[tauri::command]
+fn import_codex_pet(app: AppHandle, archive: Vec<u8>) -> Result<CodexPetResource, String> {
+    if archive.len() > 50 * 1024 * 1024 {
+        return Err("资源包超过 50 MB，无法导入。".into());
+    }
+    let (manifest, sprite_bytes) = read_codex_pet_archive(&archive)?;
+    let root = pet_storage_root(&app)?;
+    fs::create_dir_all(&root).map_err(|_| "无法创建宠物资源目录。".to_string())?;
+    let package_dir = unique_pet_package_dir(&root, &manifest.id);
+    fs::create_dir_all(&package_dir).map_err(|_| "无法保存宠物资源。".to_string())?;
+    fs::write(package_dir.join("pet.json"), serde_json::to_vec_pretty(&manifest).map_err(|_| "资源元数据无法保存。".to_string())?)
+        .map_err(|_| "资源元数据无法保存。".to_string())?;
+    fs::write(package_dir.join("spritesheet.webp"), &sprite_bytes)
+        .map_err(|_| "宠物图集无法保存。".to_string())?;
+    fs::write(root.join("active.json"), serde_json::json!({"package": package_dir.file_name().and_then(|name| name.to_str()).unwrap_or_default()} ).to_string())
+        .map_err(|_| "无法记录当前宠物。".to_string())?;
+    Ok(CodexPetResource { display_name: manifest.display_name, description: manifest.description, sprite_bytes })
+}
+
+/// 读取上次激活的资源；首次启动或资源损坏时返回内置 SVG 回退。
+#[tauri::command]
+fn load_codex_pet(app: AppHandle) -> Result<Option<CodexPetResource>, String> {
+    let root = pet_storage_root(&app)?;
+    let active_path = root.join("active.json");
+    if !active_path.exists() { return Ok(None); }
+    let active: serde_json::Value = serde_json::from_slice(&fs::read(&active_path).map_err(|_| "当前宠物记录无法读取。".to_string())?)
+        .map_err(|_| "当前宠物记录已损坏。".to_string())?;
+    let package = active.get("package").and_then(serde_json::Value::as_str).ok_or("当前宠物记录无效。")?;
+    if package.contains('/') || package.contains('\\') || package == ".." || package.is_empty() {
+        return Err("当前宠物记录路径无效。".into());
+    }
+    let package_dir = root.join(package);
+    let manifest = read_manifest(&package_dir.join("pet.json"))?;
+    let sprite_bytes = fs::read(package_dir.join("spritesheet.webp")).map_err(|_| "当前宠物图集无法读取。".to_string())?;
+    validate_sprite(&sprite_bytes)?;
+    Ok(Some(CodexPetResource { display_name: manifest.display_name, description: manifest.description, sprite_bytes }))
+}
+
+/// 返回应用专属的持久化宠物目录，不依赖前端传入路径。
+fn pet_storage_root(app: &AppHandle) -> Result<PathBuf, String> {
+    Ok(app.path().app_data_dir().map_err(|_| "无法定位应用数据目录。".to_string())?.join("pets"))
+}
+
+/// 从 ZIP 中读取标准文件名，拒绝路径穿越、重复文件和超大条目。
+fn read_codex_pet_archive(archive: &[u8]) -> Result<(CodexPetManifest, Vec<u8>), String> {
+    let mut zip = zip::ZipArchive::new(Cursor::new(archive)).map_err(|_| "资源包不是有效的 ZIP 文件。".to_string())?;
+    let mut manifest_bytes = None;
+    let mut sprite_bytes = None;
+    for index in 0..zip.len() {
+        let mut entry = zip.by_index(index).map_err(|_| "资源包目录无法读取。".to_string())?;
+        if entry.is_dir() { continue; }
+        let name = entry.enclosed_name().ok_or("资源包包含无效路径。")?;
+        let basename = name.file_name().and_then(|value| value.to_str()).unwrap_or_default();
+        match basename {
+            "pet.json" => {
+                if manifest_bytes.is_some() { return Err("资源包包含多个 pet.json。".into()); }
+                if entry.size() > 1024 * 1024 { return Err("pet.json 超过 1 MB。".into()); }
+                let mut bytes = Vec::with_capacity(entry.size() as usize);
+                entry.read_to_end(&mut bytes).map_err(|_| "pet.json 无法读取。".to_string())?;
+                manifest_bytes = Some(bytes);
+            }
+            "spritesheet.webp" => {
+                if sprite_bytes.is_some() { return Err("资源包包含多个 spritesheet.webp。".into()); }
+                if entry.size() > 20 * 1024 * 1024 { return Err("宠物图集超过 20 MB。".into()); }
+                let mut bytes = Vec::with_capacity(entry.size() as usize);
+                entry.read_to_end(&mut bytes).map_err(|_| "宠物图集无法读取。".to_string())?;
+                sprite_bytes = Some(bytes);
+            }
+            _ => {}
+        }
+    }
+    let manifest_bytes = manifest_bytes.ok_or("资源包缺少 pet.json。")?;
+    let sprite_bytes = sprite_bytes.ok_or("资源包缺少 spritesheet.webp。")?;
+    let manifest: CodexPetManifest = serde_json::from_slice(&manifest_bytes).map_err(|_| "pet.json 不是有效的 JSON。".to_string())?;
+    validate_manifest(&manifest)?;
+    validate_sprite(&sprite_bytes)?;
+    Ok((manifest, sprite_bytes))
+}
+
+/// 读取并校验已保存的宠物元数据。
+fn read_manifest(path: &Path) -> Result<CodexPetManifest, String> {
+    let manifest: CodexPetManifest = serde_json::from_slice(&fs::read(path).map_err(|_| "pet.json 无法读取。".to_string())?)
+        .map_err(|_| "pet.json 不是有效的 JSON。".to_string())?;
+    validate_manifest(&manifest)?;
+    Ok(manifest)
+}
+
+/// 校验 Codex v2 的最低兼容契约。
+fn validate_manifest(manifest: &CodexPetManifest) -> Result<(), String> {
+    if manifest.id.trim().is_empty() || manifest.display_name.trim().is_empty() { return Err("pet.json 缺少宠物 id 或 displayName。".into()); }
+    if manifest.sprite_version_number != 2 { return Err("只支持 Codex v2 宠物资源包。".into()); }
+    Ok(())
+}
+
+/// 只接受 1536×2288 的 WebP 图集，避免安装错误格式导致运行时空白。
+fn validate_sprite(bytes: &[u8]) -> Result<(), String> {
+    let (width, height) = webp_dimensions(bytes).ok_or("spritesheet.webp 不是可识别的 WebP 图像。")?;
+    if (width, height) != (1536, 2288) { return Err(format!("宠物图集尺寸必须为 1536×2288，当前为 {width}×{height}。")); }
+    Ok(())
+}
+
+/// 解析 VP8、VP8L 和 VP8X WebP 头部尺寸，不引入完整图像解码依赖。
+fn webp_dimensions(bytes: &[u8]) -> Option<(u32, u32)> {
+    if bytes.len() < 20 || &bytes[0..4] != b"RIFF" || &bytes[8..12] != b"WEBP" { return None; }
+    let chunk = &bytes[12..16];
+    let size = u32::from_le_bytes(bytes[16..20].try_into().ok()?) as usize;
+    let end = 20usize.checked_add(size)?.min(bytes.len());
+    let data = &bytes[20..end];
+    match chunk {
+        b"VP8X" if data.len() >= 10 => Some((1 + (u32::from(data[4]) | (u32::from(data[5]) << 8) | (u32::from(data[6]) << 16)), 1 + (u32::from(data[7]) | (u32::from(data[8]) << 8) | (u32::from(data[9]) << 16)))),
+        b"VP8L" if data.len() >= 6 && data[0] == 0x2f => Some((1 + (u32::from(data[1]) | (u32::from(data[2]) << 8) | ((u32::from(data[3]) & 0x3f) << 16)), 1 + ((u32::from(data[3]) >> 6) | (u32::from(data[4]) << 2) | ((u32::from(data[5]) & 0xf) << 10)))),
+        b"VP8 " => {
+            let marker = data.windows(3).position(|window| window == &[0x9d, 0x01, 0x2a])?;
+            if data.len() < marker + 10 { return None; }
+            let width = u16::from_le_bytes(data[marker + 3..marker + 5].try_into().ok()?) & 0x3fff;
+            let height = u16::from_le_bytes(data[marker + 5..marker + 7].try_into().ok()?) & 0x3fff;
+            Some((u32::from(width), u32::from(height)))
+        }
+        _ => None,
+    }
+}
+
+/// 生成不含路径分隔符的目录名，并在同名导入时追加时间戳。
+fn unique_pet_package_dir(root: &Path, id: &str) -> PathBuf {
+    let safe_id: String = id.chars().filter(|ch| ch.is_ascii_alphanumeric() || *ch == '-' || *ch == '_').take(64).collect();
+    let safe_id = if safe_id.is_empty() { "imported-pet" } else { &safe_id };
+    let base = root.join(safe_id);
+    if !base.exists() { return base; }
+    let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).map(|value| value.as_nanos()).unwrap_or_default();
+    root.join(format!("{safe_id}-{timestamp}"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{validate_manifest, webp_dimensions, CodexPetManifest};
+
+    /// VP8X 头部应能解析出 Codex v2 要求的图集尺寸。
+    #[test]
+    fn parses_vp8x_dimensions() {
+        let width_minus_one = 1535u32.to_le_bytes();
+        let height_minus_one = 2287u32.to_le_bytes();
+        let mut bytes = b"RIFF\0\0\0\0WEBPVP8X\x0A\0\0\0".to_vec();
+        bytes.extend([0, 0, 0, 0]);
+        bytes.extend([width_minus_one[0], width_minus_one[1], width_minus_one[2]]);
+        bytes.extend([height_minus_one[0], height_minus_one[1], height_minus_one[2]]);
+        assert_eq!(webp_dimensions(&bytes), Some((1536, 2288)));
+    }
+
+    /// 非 v2 资源不能通过导入契约。
+    #[test]
+    fn rejects_non_v2_manifest() {
+        let manifest = CodexPetManifest {
+            id: "demo".into(),
+            display_name: "Demo".into(),
+            description: String::new(),
+            sprite_version_number: 1,
+        };
+        assert!(validate_manifest(&manifest).is_err());
+    }
 }
 
 /// 开关系统登录启动；状态由 macOS LaunchAgent 或 Windows 注册表负责保存。
