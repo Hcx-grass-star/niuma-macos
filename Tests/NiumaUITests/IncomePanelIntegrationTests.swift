@@ -15,6 +15,12 @@ struct IncomePanelIntegrationTests {
     static var tick = 0
     /// 驱动阶段切换的唯一测试定时器。
     static var timer: Timer?
+    /// 可选事件诊断观察者，记录焦点竞争而不改写应用事件处理。
+    static var eventObservers: [NSObjectProtocol] = []
+    /// 上一个资源点位的内核计数，用于计算两个点位之间的平均 CPU。
+    static var previousUsage: rusage_info_v4?
+    /// 上一个资源点位的单调时钟，避免系统时钟调整影响 CPU 比例。
+    static var previousUptime: TimeInterval = 0
     /// 关闭前持有的弱引用，用于证明控制器实际释放。
     static weak var closedController: NSViewController?
 
@@ -22,6 +28,8 @@ struct IncomePanelIntegrationTests {
     static weak var closedSettings: NSWindowController?
     /// 验证 AppKit 没有继续保留已关闭设置的窗口和后备缓冲区。
     static weak var closedSettingsWindow: NSWindow?
+    /// 验证原生玻璃视图没有在面板关闭后被观察者或父视图保留。
+    static weak var closedGlassView: NSView?
 
     /// 创建隔离工资配置并启动 AppKit，任一断言失败立即返回非零。
     static func main() throws {
@@ -32,9 +40,11 @@ struct IncomePanelIntegrationTests {
         settings.salary = 21000
         settings.menuBarDisplay = .current
         settings.chinaHolidayEnabled = true
+        settings.panelAppearance.glassEnabled = CommandLine.arguments.contains("--glass-enabled")
         let store = SettingsStore(directory: directory)
         try store.save(settings)
         print("PID: \(getpid())")
+        print("测试配置：\(directory.path)；更新偏好：\(defaultsName)")
         fflush(nil)
         let app = NSApplication.shared
         app.setActivationPolicy(.accessory)
@@ -49,6 +59,20 @@ struct IncomePanelIntegrationTests {
         }
         delegate = AppDelegate(store: store, updates: UpdateController(defaults: defaults, currentVersion: "0.3.1"))
         app.delegate = delegate
+        if ProcessInfo.processInfo.environment["NIUMA_UI_TRACE"] == "1" {
+            for name in [NSApplication.didBecomeActiveNotification, NSApplication.didResignActiveNotification,
+                         NSWindow.didBecomeKeyNotification, NSWindow.didResignKeyNotification, NSWindow.willCloseNotification] {
+                eventObservers.append(NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { note in
+                    let eventName = note.name.rawValue
+                    let objectType = note.object.map { String(describing: type(of: $0)) } ?? "nil"
+                    MainActor.assumeIsolated {
+                        let panel = NSApp.windows.compactMap { $0 as? IncomePanel }.first
+                        print("event tick=\(tick) \(eventName) object=\(objectType) active=\(NSApp.isActive) panelVisible=\(panel?.isVisible ?? false) panelKey=\(panel?.isKeyWindow ?? false)")
+                        fflush(nil)
+                    }
+                })
+            }
+        }
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
             MainActor.assumeIsolated { advance() }
         }
@@ -60,9 +84,12 @@ struct IncomePanelIntegrationTests {
         if !condition { print("FAIL: " + message); finish(code: 1) }
     }
 
-    /// 通过正式菜单触发窗口，验证关闭、再次打开和设置取消均可正常使用。
+    /// 按阶段执行菜单生命周期检查，或执行后台菜单栏入口的回归检查。
     static func advance() {
         tick += 1
+        if CommandLine.arguments.contains("--panel-resources") { advancePanelResources(); return }
+        if CommandLine.arguments.contains("--appearance-config") { advanceAppearanceConfiguration(); return }
+        if CommandLine.arguments.contains("--panel-regression") { advancePanelRegression(); return }
         let commands = NSApp.mainMenu!.items[0].submenu!
         if tick == 3 { sample("idle"); commands.performActionForItem(at: 0) }
         if tick == 8 {
@@ -110,6 +137,252 @@ struct IncomePanelIntegrationTests {
         }
     }
 
+    /// 在不打开设置或生成位图的情况下，分别采样可见面板和收起后的稳定区间。
+    static func advancePanelResources() {
+        if tick == 1 { NSApp.activate(ignoringOtherApps: true) }
+        if tick == 3 { sample("resource-idle"); NSApp.mainMenu!.items[0].submenu!.performActionForItem(at: 0) }
+        if tick == 8 {
+            require(NSApp.windows.contains { $0 is IncomePanel && $0.isVisible }, "资源采样期间面板应展开")
+            sample("resource-panel-warm")
+        }
+        if tick == 18 {
+            let panel = NSApp.windows.compactMap { $0 as? IncomePanel }.first!
+            require(panel.isVisible, "可见面板采样不能包含被提前关闭的区间")
+            sample("resource-panel-stable")
+            panel.close()
+        }
+        if tick == 23 { sample("resource-closed-warm") }
+        if tick == 33 {
+            require(!NSApp.windows.contains { $0 is IncomePanel && $0.isVisible }, "后台采样时不得保留可见面板")
+            sample("resource-closed-stable")
+            finish(code: 0)
+        }
+    }
+
+    /// 通过真实设置控件保存、取消和再次修改外观，检查材质与工资配置的一致性。
+    static func advanceAppearanceConfiguration() {
+        let commands = NSApp.mainMenu!.items[0].submenu!
+        var expected = PanelAppearanceSettings()
+        expected.glassEnabled = true
+        expected.mode = .dark
+        expected.tintHex = "3377BB"
+        do {
+            if tick == 3 { sample("appearance-idle"); commands.performActionForItem(at: 1) }
+            if tick == 5 {
+                let window = visibleSettingsWindow()
+                let controls = appearanceControls(in: window)
+                require(controls.mode.indexOfSelectedItem == 0 && controls.glass.state == .off && controls.tintEnabled.state == .off,
+                        "初始外观应跟随系统、关闭玻璃与自定义染色")
+                controls.glass.state = .on
+                controls.mode.selectItem(at: 2)
+                NSApp.sendAction(controls.mode.action!, to: controls.mode.target, from: controls.mode)
+                require(window.appearance?.name == .darkAqua, "设置窗口应预览深色草稿")
+                controls.tintEnabled.state = .on
+                NSApp.sendAction(controls.tintEnabled.action!, to: controls.tintEnabled.target, from: controls.tintEnabled)
+                require(controls.tint.isEnabled, "启用染色后应能选择颜色")
+                controls.tint.color = expected.nativeTintColor!
+                settingsButton("保存并返回", in: window).performClick(nil)
+                let error = descendants(of: window.contentView!).compactMap { $0 as? NSTextField }
+                    .first { $0.accessibilityIdentifier() == "settingsError" }
+                print("保存动作后：visible=\(window.isVisible)，表单错误=\(error?.stringValue ?? "无")")
+            }
+            if tick == 7 {
+                guard let panel = NSApp.windows.compactMap({ $0 as? IncomePanel }).first else {
+                    require(false, "保存外观后应创建收入面板"); return
+                }
+                require(panel.isVisible && panel.isKeyWindow, "保存外观后应返回收入面板并取得焦点")
+                let background = panel.contentViewController!.view as! IncomePanelBackgroundView
+                let saved = try SettingsStore(directory: directory).load()!
+                require(saved.panelAppearance == expected && saved.salary == 21000, "保存重载应保留外观且不改变工资")
+                require(background.appearance?.name == .darkAqua, "收入面板应使用已保存深色外观")
+                if #available(macOS 26.0, *) {
+                    let glasses = descendants(of: background).compactMap { $0 as? NSGlassEffectView }
+                    let reduced = NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency
+                        || NSWorkspace.shared.accessibilityDisplayShouldIncreaseContrast
+                    require(glasses.count == (reduced ? 0 : 1), "应按系统可读性要求使用唯一原生玻璃或普通背景")
+                    if let glass = glasses.first {
+                        require(glass.contentView === background.contentView, "业务控件必须嵌入原生玻璃的 contentView")
+                        require(glass.cornerRadius == 12 && glass.tintColor?.panelTintHex == expected.tintHex, "玻璃应保留圆角与染色")
+                        closedGlassView = glass
+                    }
+                }
+                require(background.contentView.bounds.size == background.bounds.size, "原生材质不应挤压业务布局")
+                sample("appearance-glass-panel")
+                closedController = panel.contentViewController
+                panel.close()
+            }
+            if tick == 9 {
+                require(closedController == nil && closedGlassView == nil, "收起面板应释放内容与原生玻璃")
+                sample("appearance-after-glass")
+                commands.performActionForItem(at: 1)
+            }
+            if tick == 11 {
+                let window = visibleSettingsWindow()
+                let controls = appearanceControls(in: window)
+                require(controls.mode.indexOfSelectedItem == 2 && controls.glass.state == .on
+                    && controls.tint.color.panelTintHex == "3377BB", "再次打开设置应恢复已保存外观")
+                controls.mode.selectItem(at: 1)
+                controls.glass.state = .off
+                controls.tintEnabled.state = .off
+                settingsButton("取消修改", in: window).performClick(nil)
+                require(try SettingsStore(directory: directory).load()!.panelAppearance == expected, "取消外观草稿不得写入配置")
+                commands.performActionForItem(at: 1)
+            }
+            if tick == 13 {
+                let window = visibleSettingsWindow()
+                let controls = appearanceControls(in: window)
+                require(controls.mode.indexOfSelectedItem == 2, "取消后再次打开应保留已保存主题")
+                controls.glass.state = .off
+                controls.mode.selectItem(at: 1)
+                controls.tintEnabled.state = .off
+                settingsButton("保存并返回", in: window).performClick(nil)
+            }
+            if tick == 15 {
+                let panel = NSApp.windows.compactMap { $0 as? IncomePanel }.first!
+                require(panel.isVisible && panel.contentViewController != nil, "再次保存应展开收入面板")
+                let background = panel.contentViewController!.view as! IncomePanelBackgroundView
+                let saved = try SettingsStore(directory: directory).load()!.panelAppearance
+                require(!saved.glassEnabled && saved.mode == .light && saved.tintHex == nil, "应保存浅色普通背景并清除染色")
+                require(background.appearance?.name == .aqua, "关闭玻璃后应应用浅色外观")
+                if #available(macOS 26.0, *) {
+                    require(!descendants(of: background).contains { $0 is NSGlassEffectView }, "关闭玻璃不得保留特效视图")
+                }
+                verifyPanelAppearance(panel)
+                panel.close()
+                print("PASS: 外观控件保存与取消、重载、原生玻璃嵌入与释放、主题、染色及普通圆角回退")
+                finish(code: 0)
+            }
+        } catch { require(false, "外观集成检查失败：\(error)") }
+    }
+
+    /// 在异步窗口切换完成后检查设置页，失败时保留窗口诊断并正常清理测试数据。
+    static func visibleSettingsWindow() -> NSWindow {
+        let window = NSApp.windows.first { $0.isVisible && $0.windowController is SettingsWindowController }
+        if window == nil {
+            print("tick=\(tick) 窗口：" + NSApp.windows.map { "\(type(of: $0)) visible=\($0.isVisible) settings=\($0.windowController is SettingsWindowController)" }.joined(separator: "; "))
+        }
+        require(window != nil, "设置窗口应展开")
+        return window!
+    }
+
+    /// 从真实设置表单定位外观控件，不绕过保存路径修改应用配置。
+    static func appearanceControls(in window: NSWindow) -> (glass: NSButton, mode: NSPopUpButton, tintEnabled: NSButton, tint: NSColorWell) {
+        let views = descendants(of: window.contentView!)
+        return (views.first { $0.accessibilityIdentifier() == "panelGlassEnabled" } as! NSButton,
+                views.first { $0.accessibilityIdentifier() == "appearanceMode" } as! NSPopUpButton,
+                views.first { $0.accessibilityIdentifier() == "panelTintEnabled" } as! NSButton,
+                views.first { $0.accessibilityIdentifier() == "panelTintColor" } as! NSColorWell)
+    }
+
+    /// 通过表单按钮触发正式保存或取消动作，包含校验、持久化和窗口切换。
+    static func settingsButton(_ title: String, in window: NSWindow) -> NSButton {
+        let button = descendants(of: window.contentView!).compactMap { $0 as? NSButton }.first { $0.title == title }
+        require(button != nil, "设置表单中缺少按钮：\(title)")
+        print("表单动作：\(title)，enabled=\(button!.isEnabled)，key=\(window.isKeyWindow)")
+        return button!
+    }
+
+    /// 派发状态栏和控件动作，检查焦点、圆角与关闭路径；不模拟系统鼠标。
+    static func advancePanelRegression() {
+        if tick == 1 { NSApp.deactivate() }
+        if tick == 3 {
+            require(!NSApp.isActive, "回归检查必须从应用未激活的状态开始")
+            print("before status action: active=\(NSApp.isActive)")
+            sample("regression-idle")
+            statusButton().performClick(nil)
+        }
+        if tick == 5 {
+            guard let panel = NSApp.windows.compactMap({ $0 as? IncomePanel }).first else {
+                require(false, "状态栏动作应创建面板"); return
+            }
+            print("after status action: active=\(NSApp.isActive) visible=\(panel.isVisible) key=\(panel.isKeyWindow) hides=\(panel.hidesOnDeactivate)")
+            require(panel.isVisible && panel.isKeyWindow, "后台状态栏动作应展开面板并取得键盘焦点")
+            sample("regression-panel")
+            verifyPanelAppearance(panel)
+            closedController = panel.contentViewController
+            statusButton().performClick(nil)
+        }
+        if tick == 7 {
+            require(closedController == nil, "再次点击菜单栏应收起并释放收入控制器")
+            statusButton().performClick(nil)
+        }
+        if tick == 9 {
+            let panel = NSApp.windows.compactMap { $0 as? IncomePanel }.first!
+            require(panel.isVisible && panel.isKeyWindow, "收起后应能再次通过状态栏展开")
+            let privacy = descendants(of: panel.contentView!).compactMap { $0 as? NSButton }
+                .first { $0.toolTip == "隐藏金额" }
+            require(privacy != nil, "收入面板应包含隐私入口")
+            privacy?.performClick(nil)
+            let amounts = descendants(of: panel.contentView!).compactMap { $0 as? NSTextField }
+                .filter { ["currentIncome", "monthToDateIncome", "yearToDateIncome"].contains($0.accessibilityIdentifier()) }
+            require(amounts.count == 3 && amounts.allSatisfy { $0.stringValue == "••••" }, "隐私按钮应隐藏所有金额")
+            privacy?.performClick(nil)
+            require(amounts.allSatisfy { $0.stringValue.hasPrefix("¥") }, "隐私按钮应能恢复所有金额")
+            // 在同一进程创建另一窗口触发真实 AppKit 失焦通知，不直接调用委托回调。
+            let other = NSWindow(contentRect: NSRect(x: 40, y: 40, width: 120, height: 100),
+                                 styleMask: [.titled], backing: .buffered, defer: false)
+            other.isReleasedWhenClosed = false
+            other.makeKeyAndOrderFront(nil)
+            require(!panel.isVisible && panel.contentViewController == nil, "其他窗口取得焦点应收起并释放面板")
+            other.close()
+            statusButton().performClick(nil)
+            require(panel.isVisible && panel.isKeyWindow, "失焦关闭后状态栏仍应能展开")
+            panel.cancelOperation(nil)
+            require(!panel.isVisible, "Esc 处理应收起面板")
+            statusButton().performClick(nil)
+            let settings = descendants(of: panel.contentView!).compactMap { $0 as? NSButton }.first { $0.title == "设置" }
+            require(settings != nil, "面板应包含设置入口")
+            settings?.performClick(nil)
+        }
+        if tick == 12 {
+            let windows = NSApp.windows.filter { $0.isVisible && $0.windowController is SettingsWindowController }
+            require(windows.count == 1, "面板设置入口应打开唯一设置窗口")
+            sample("regression-settings")
+            closedSettings = windows[0].windowController
+            closedSettingsWindow = windows[0]
+            windows[0].close()
+        }
+        if tick == 15 {
+            require(closedSettings == nil && closedSettingsWindow == nil, "设置关闭后应释放窗口与控制器")
+            sample("regression-after-close")
+            print("PASS: 后台状态栏动作、重复切换、深浅色圆角像素、隐私切换、AppKit失焦通知、Esc处理及面板设置入口")
+            finish(code: 0)
+        }
+    }
+
+    /// 从应用自己的状态栏窗口查找按钮，沿正式 target/action 链触发展开或收起。
+    static func statusButton() -> NSStatusBarButton {
+        let button = NSApp.windows.compactMap { $0.contentView }
+            .flatMap { descendants(of: $0) }.compactMap { $0 as? NSStatusBarButton }.first
+        require(button != nil, "应找到正式状态栏按钮")
+        return button!
+    }
+
+    /// 对实际收入视图离屏渲染，检查深浅外观的透明四角及不透明内部，并可保存证据。
+    static func verifyPanelAppearance(_ panel: IncomePanel) {
+        require(!panel.isOpaque && panel.backgroundColor == .clear && panel.hasShadow, "圆角窗口应透明且保留阴影")
+        let view = panel.contentViewController!.view
+        let originalAppearance = view.appearance
+        defer { view.appearance = originalAppearance }
+        for name in [NSAppearance.Name.aqua, .darkAqua] {
+            view.appearance = NSAppearance(named: name)
+            view.layoutSubtreeIfNeeded()
+            let bitmap = view.bitmapImageRepForCachingDisplay(in: view.bounds)!
+            view.cacheDisplay(in: view.bounds, to: bitmap)
+            for (x, y) in [(0, 0), (bitmap.pixelsWide - 1, 0), (0, bitmap.pixelsHigh - 1), (bitmap.pixelsWide - 1, bitmap.pixelsHigh - 1)] {
+                require(bitmap.colorAt(x: x, y: y)!.alphaComponent < 0.01, "\(name.rawValue)四角应为透明像素")
+            }
+            require(bitmap.colorAt(x: bitmap.pixelsWide / 2, y: 2)!.alphaComponent > 0.99, "圆角内部应有完整背景")
+            if let output = ProcessInfo.processInfo.environment["NIUMA_UI_ARTIFACTS"] {
+                let directory = URL(fileURLWithPath: output, isDirectory: true)
+                do {
+                    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+                    try bitmap.representation(using: .png, properties: [:])!.write(to: directory.appendingPathComponent("income-panel-\(name.rawValue).png"))
+                } catch { require(false, "无法写入面板渲染证据：\(error)") }
+            }
+        }
+    }
+
     /// 验证真实设置页可辨别测试包，且直接调用动作也不能绕过环境限制。
     static func verifyBuildChannel(in window: NSWindow) {
         require(window.title.contains("测试版"), "测试包设置标题应标注环境")
@@ -126,7 +399,7 @@ struct IncomePanelIntegrationTests {
         [view] + view.subviews.flatMap { descendants(of: $0) }
     }
 
-    /// 记录同一内核口径的短时实测，不把设置期超预算隐藏为验收通过。
+    /// 记录 physical footprint 和上一个点位以来的平均 CPU，不将点位当作持续上限。
     static func sample(_ stage: String) {
         var info = rusage_info_v4()
         let result = withUnsafeMutableBytes(of: &info) {
@@ -135,6 +408,14 @@ struct IncomePanelIntegrationTests {
         require(result == 0, "内核资源指标读取")
         print(String(format: "%@: %.2f MB; lifetime peak %.2f MB", stage,
                      Double(info.ri_phys_footprint) / 1_000_000, Double(info.ri_lifetime_max_phys_footprint) / 1_000_000))
+        let uptime = ProcessInfo.processInfo.systemUptime
+        if let previousUsage {
+            let cpu = Double(info.ri_user_time - previousUsage.ri_user_time + info.ri_system_time - previousUsage.ri_system_time)
+                / 1_000_000_000 / (uptime - previousUptime) * 100
+            print(String(format: "%@: interval %.2f s; CPU %.4f%%", stage, uptime - previousUptime, cpu))
+        }
+        previousUsage = info
+        previousUptime = uptime
         fflush(nil)
     }
 

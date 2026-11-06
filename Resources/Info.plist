@@ -11,8 +11,8 @@
     <!-- 系统设置、Finder 与其他应用使用同一份多尺寸应用图标。 -->
     <key>CFBundleIconFile</key><string>AppIcon.icns</string>
     <key>CFBundlePackageType</key><string>APPL</string>
-    <key>CFBundleShortVersionString</key><string>0.3.2</string>
-    <key>CFBundleVersion</key><string>6</string>
+    <key>CFBundleShortVersionString</key><string>0.3.3</string>
+    <key>CFBundleVersion</key><string>7</string>
     <key>LSMinimumSystemVersion</key><string>13.0</string>
     <key>LSUIElement</key><true/>
     <key>LSMultipleInstancesProhibited</key><false/>

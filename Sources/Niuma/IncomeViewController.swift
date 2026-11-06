@@ -46,9 +46,11 @@ final class IncomeViewController: NSViewController {
     /// 负责保存并切换金额隐私的操作。
     var onPrivacy: (() -> Void)?
 
-    /// 创建接近已评审原型的原生弹出面板。
+    /// 在可切换材质的圆角底板内容容器中布局，保证控件处于系统玻璃内部。
     override func loadView() {
-        view = NSView(frame: NSRect(x: 0, y: 0, width: 360, height: 480))
+        let background = IncomePanelBackgroundView(frame: NSRect(x: 0, y: 0, width: 360, height: 480))
+        view = background
+        let contentView = background.contentView
         let brand = NSTextField(labelWithString: AppBuildChannel.current.displayName)
         brand.font = .systemFont(ofSize: 13, weight: .medium)
         let icon = NSImageView(image: NSImage(systemSymbolName: "leaf", accessibilityDescription: nil)!)
@@ -110,12 +112,12 @@ final class IncomeViewController: NSViewController {
         stack.alignment = .centerX
         stack.spacing = 7
         stack.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(stack)
+        contentView.addSubview(stack)
         NSLayoutConstraint.activate([
-            stack.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 22),
-            stack.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -22),
-            stack.topAnchor.constraint(equalTo: view.topAnchor, constant: 18),
-            stack.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -16),
+            stack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 22),
+            stack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -22),
+            stack.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 18),
+            stack.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -16),
             header.widthAnchor.constraint(equalTo: stack.widthAnchor),
             footer.widthAnchor.constraint(equalTo: stack.widthAnchor),
             separator.widthAnchor.constraint(equalTo: stack.widthAnchor),
@@ -129,10 +131,11 @@ final class IncomeViewController: NSViewController {
         ])
     }
 
-    /// 同步展示当前、本月和本年预估金额，共用隐私开关，错误时不展示旧金额。
+    /// 同步金额、隐私及外观；材质内部去重，错误时不展示旧金额。
     func render(_ snapshot: IncomeSnapshot, settings: WorkSettings?, error: String? = nil) {
         // 读取 view 会按需触发 loadView；loadViewIfNeeded() 需 macOS 14，故不直接调用。
         _ = view
+        (view as? IncomePanelBackgroundView)?.apply(settings?.panelAppearance ?? PanelAppearanceSettings())
         let hidden = settings?.hideAmounts == true
         var layoutChanged = preferredContentSize.height == 0
         amount.stringValue = hidden ? "••••" : Self.money(snapshot.amount)

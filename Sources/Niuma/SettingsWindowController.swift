@@ -71,6 +71,14 @@ final class SettingsWindowController: NSWindowController, NSTextFieldDelegate, N
     private let yearlyIncomeVisible = NSButton(checkboxWithTitle: "本年预估已赚", target: nil, action: nil)
     /// 菜单栏内容选择，保存后与详情面板使用相同金额。
     private let menuIncome = NSPopUpButton()
+    /// 用户明确选择原生液态玻璃，旧系统保留偏好并使用普通背景。
+    private let panelGlass = NSButton(checkboxWithTitle: "使用原生液态玻璃", target: nil, action: nil)
+    /// 收入面板与设置窗口共同使用的主题选择。
+    private let appearanceMode = NSPopUpButton()
+    /// 是否启用自定义染色；取消勾选时恢复系统默认底色。
+    private let panelTintEnabled = NSButton(checkboxWithTitle: "自定义面板染色", target: nil, action: nil)
+    /// 系统原生颜色选择器，保存时转为不透明 sRGB。
+    private let panelTint = NSColorWell()
     /// 系统管理的登录启动开关，不写入工资配置。
     private let login = NSButton(checkboxWithTitle: "登录后自动启动（立即生效）", target: nil, action: nil)
     /// 显示自动启动的实际系统状态。
@@ -88,7 +96,7 @@ final class SettingsWindowController: NSWindowController, NSTextFieldDelegate, N
     /// 用户明确点击后下载、校验并原位安装新版。
     private let downloadUpdate = NSButton(title: "安装更新", target: nil, action: nil)
 
-    /// 根据现有设置创建独立草稿，并连接实际保存与重置操作。
+    /// 根据已保存工资和外观创建独立草稿，连接实际保存与重置操作。
     init(settings: WorkSettings, dataPath: String, updates: UpdateController,
          onSave: @escaping (WorkSettings) throws -> Void, onReset: @escaping () throws -> Void) {
         original = settings
@@ -100,6 +108,7 @@ final class SettingsWindowController: NSWindowController, NSTextFieldDelegate, N
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 450, height: 690),
                               styleMask: [.titled, .closable], backing: .buffered, defer: false)
         window.title = AppBuildChannel.current.displayName + " · 工资与作息"
+        window.appearance = settings.panelAppearance.mode.nativeAppearance
         window.isReleasedWhenClosed = false
         super.init(window: window)
         window.delegate = self
@@ -111,7 +120,7 @@ final class SettingsWindowController: NSWindowController, NSTextFieldDelegate, N
     @available(*, unavailable)
     required init?(coder: NSCoder) { nil }
 
-    /// 构建原生可滚动表单，包含真实配置保存和系统状态入口。
+    /// 构建工资、面板外观及系统状态表单；外观与工资均在保存后持久化。
     private func buildForm() {
         guard let window else { return }
         let scroll = NSScrollView(frame: window.contentView!.bounds)
@@ -215,6 +224,27 @@ final class SettingsWindowController: NSWindowController, NSTextFieldDelegate, N
         stack.addArrangedSubview(yearlyIncomeVisible)
         stack.addArrangedSubview(cheer)
         stack.addArrangedSubview(horizontal([label("菜单栏显示", secondary: false), menuIncome]))
+        stack.addArrangedSubview(label("面板外观", secondary: false))
+        panelGlass.state = original.panelAppearance.glassEnabled ? .on : .off
+        panelGlass.setAccessibilityIdentifier("panelGlassEnabled")
+        if #available(macOS 26.0, *) {} else { panelGlass.isEnabled = false }
+        stack.addArrangedSubview(panelGlass)
+        stack.addArrangedSubview(label("液态玻璃需要 macOS 26 或更新版本；关闭时使用普通圆角背景。"))
+        appearanceMode.addItems(withTitles: AppearanceMode.allCases.map { $0.title })
+        appearanceMode.selectItem(at: AppearanceMode.allCases.firstIndex(of: original.panelAppearance.mode) ?? 0)
+        appearanceMode.setAccessibilityIdentifier("appearanceMode")
+        appearanceMode.target = self
+        appearanceMode.action = #selector(updateAppearancePreview)
+        stack.addArrangedSubview(horizontal([label("深浅外观", secondary: false), appearanceMode]))
+        panelTintEnabled.state = original.panelAppearance.tintHex == nil ? .off : .on
+        panelTintEnabled.setAccessibilityIdentifier("panelTintEnabled")
+        panelTintEnabled.target = self
+        panelTintEnabled.action = #selector(updateAppearancePreview)
+        panelTint.color = original.panelAppearance.nativeTintColor ?? .systemGreen
+        panelTint.isEnabled = panelTintEnabled.state == .on
+        panelTint.setAccessibilityIdentifier("panelTintColor")
+        stack.addArrangedSubview(horizontal([panelTintEnabled, panelTint]))
+        stack.addArrangedSubview(label("保存后应用面板外观；取消则保留原设置。普通背景使用轻微染色。"))
         let separator = NSBox()
         separator.boxType = .separator
         stack.addArrangedSubview(separator)
@@ -337,7 +367,7 @@ final class SettingsWindowController: NSWindowController, NSTextFieldDelegate, N
         }
     }
 
-    /// 从界面读取一个完整草稿，保留未编辑的隐私状态。
+    /// 读取完整工资和外观草稿，保留未编辑的隐私状态并校验颜色可恢复。
     private func draft() throws -> WorkSettings {
         var settings = original
         settings.payMode = payMode.indexOfSelectedItem == 0 ? .monthly : .daily
@@ -364,8 +394,20 @@ final class SettingsWindowController: NSWindowController, NSTextFieldDelegate, N
         settings.menuBarDisplay = MenuBarDisplay.allCases[menuIncome.indexOfSelectedItem]
         settings.menuBarIncome = settings.menuBarDisplay != .icon
         settings.chinaHolidayEnabled = chinaHoliday.state == .on
+        settings.panelAppearance.glassEnabled = panelGlass.state == .on
+        settings.panelAppearance.mode = AppearanceMode.allCases[appearanceMode.indexOfSelectedItem]
+        if panelTintEnabled.state == .on {
+            guard let hex = panelTint.color.panelTintHex else { throw SettingsError.invalidPanelTint }
+            settings.panelAppearance.tintHex = hex
+        } else { settings.panelAppearance.tintHex = nil }
         try settings.validate()
         return settings
+    }
+
+    /// 仅预览当前设置窗口的主题，并控制染色输入可用性；取消时不持久化。
+    @objc private func updateAppearancePreview() {
+        window?.appearance = AppearanceMode.allCases[appearanceMode.indexOfSelectedItem].nativeAppearance
+        panelTint.isEnabled = panelTintEnabled.state == .on
     }
 
     /// 输入变化后更新同一收入指标的预览，不把草稿写入磁盘。
@@ -402,13 +444,13 @@ final class SettingsWindowController: NSWindowController, NSTextFieldDelegate, N
     /// 移除用户选中的休息区间，空列表表示休息也计薪。
     @objc private func removeRest(_ sender: NSButton) { restRows.remove(at: sender.tag); rebuildRests(); updatePreview() }
 
-    /// 校验与保存全部成功后关闭设置，否则保留原输入供修正。
+    /// 工资和外观校验、保存全部成功后关闭设置，否则保留草稿供修正。
     @objc private func save() {
         do { try onSave(draft()); close() }
         catch { showError(error) }
     }
 
-    /// 放弃工资作息草稿；立即生效的系统登录开关单独说明。
+    /// 放弃工资作息和外观草稿；立即生效的系统登录开关单独说明。
     @objc private func cancel() { close() }
 
     /// 非正式包禁用系统登录项入口；正式包展示系统实际注册状态。
@@ -443,8 +485,11 @@ final class SettingsWindowController: NSWindowController, NSTextFieldDelegate, N
     /// 从系统设置返回时重新读取可能已被撤销的登录权限。
     func windowDidBecomeKey(_ notification: Notification) { updateLoginState() }
 
-    /// 释放关闭后的窗口与草稿引用，保留的有效配置由应用持有。
-    func windowWillClose(_ notification: Notification) { onClose?() }
+    /// 关闭当前颜色选择器并释放窗口与草稿，有效配置仍由应用持有。
+    func windowWillClose(_ notification: Notification) {
+        if panelTint.isActive { panelTint.deactivate(); NSColorPanel.shared.close() }
+        onClose?()
+    }
 
     /// 清楚说明清理范围，经确认才交给应用执行真实清理。
     @objc private func reset() {

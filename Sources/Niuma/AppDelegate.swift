@@ -125,7 +125,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         catch { showAlert(error.localizedDescription) }
     }
 
-    /// 展开时按实际时间重算，收起时按需停止秒级刷新。
+    /// 从菜单栏直接展开并取得面板焦点，不依赖异步应用激活；收起时按需停止刷新。
     @objc private func toggleIncomePanel() {
         if income != nil && incomePanel.isVisible { incomePanel.close() }
         else if let button = statusItem?.button {
@@ -135,7 +135,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             income = controller
             incomePanel.contentViewController = controller
             refresh()
-            activateApplication()
             incomePanel.show(below: button)
             refresh()
         }
@@ -159,12 +158,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             _ = malloc_zone_pressure_relief(nil, 0)
         }
-    }
-
-    /// 把应用带到前台；无参 activate() 自 macOS 14 起提供，旧系统走等价选项。
-    private func activateApplication() {
-        if #available(macOS 14.0, *) { NSApp.activate() }
-        else { NSApp.activate(ignoringOtherApps: true) }
     }
 
     /// 更新收入及菜单栏，并仅为可见、会变化的金额安排刷新。

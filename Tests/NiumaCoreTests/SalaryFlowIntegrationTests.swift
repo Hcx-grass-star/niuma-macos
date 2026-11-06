@@ -26,6 +26,7 @@ struct SalaryFlowIntegrationTests {
             ("中国节假日及调休", suite.testChinaHolidaySchedule),
             ("本月收入与菜单栏选择", suite.testMonthIncome),
             ("收入面板显示偏好", suite.testIncomeVisibility),
+            ("面板外观持久化与旧配置兼容", suite.testPanelAppearance),
             ("复用引擎后的配置变更", suite.testReusableEngine),
             ("包环境识别及自启动准入", BuildChannelIntegrationTests.run)
         ]
@@ -373,6 +374,39 @@ struct SalaryFlowIntegrationTests {
         for key in ["showCurrentIncome", "showMonthlyIncome", "showYearlyIncome"] { old.removeValue(forKey: key) }
         let loaded = try JSONDecoder().decode(WorkSettings.self, from: JSONSerialization.data(withJSONObject: old))
         try expectTrue(loaded.showCurrentIncome && loaded.showMonthlyIncome && loaded.showYearlyIncome)
+    }
+
+    /// 从实际 JSON 保存重载外观，验证旧字段缺省及非法颜色不会覆盖已保存设置。
+    func testPanelAppearance() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("niuma-appearance-" + UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = SettingsStore(directory: directory)
+        var payload = try JSONSerialization.jsonObject(with: JSONEncoder().encode(monthly())) as! [String: Any]
+        payload["panelAppearance"] = ["glassEnabled": true, "mode": "dark", "tintHex": "3377BB"]
+        let settings = try JSONDecoder().decode(WorkSettings.self, from: JSONSerialization.data(withJSONObject: payload))
+        try store.save(settings)
+        let loaded = try store.load()!
+        let encoded = try JSONSerialization.jsonObject(with: JSONEncoder().encode(loaded)) as! [String: Any]
+        let appearance = encoded["panelAppearance"] as? [String: Any]
+        try expectTrue(appearance?["glassEnabled"] as? Bool == true)
+        try expectTrue(appearance?["mode"] as? String == "dark")
+        try expectTrue(appearance?["tintHex"] as? String == "3377BB")
+        try expectEqual(loaded.salary, monthly().salary)
+        try expectEqual(amount(try IncomeEngine(calendar: calendar).evaluate(loaded, at: date(4, 14))), 500)
+
+        payload.removeValue(forKey: "panelAppearance")
+        let legacy = try JSONDecoder().decode(WorkSettings.self, from: JSONSerialization.data(withJSONObject: payload))
+        let migrated = try JSONSerialization.jsonObject(with: JSONEncoder().encode(legacy)) as! [String: Any]
+        let defaults = migrated["panelAppearance"] as? [String: Any]
+        try expectTrue(defaults?["glassEnabled"] as? Bool == false)
+        try expectTrue(defaults?["mode"] as? String == "system")
+        try expectTrue(defaults?["tintHex"] == nil)
+        for color in ["#3377BB", "123", "GGHHII", "3377BBFF", "3377BB\n"] {
+            payload["panelAppearance"] = ["glassEnabled": false, "mode": "light", "tintHex": color]
+            let invalid = try JSONDecoder().decode(WorkSettings.self, from: JSONSerialization.data(withJSONObject: payload))
+            try expectThrows { try store.save(invalid) }
+            try expectEqual(try store.load(), loaded)
+        }
     }
 
     /// 真实保存、重载后复用同一引擎，工资、排班及月份改变不能沿用错误计数。

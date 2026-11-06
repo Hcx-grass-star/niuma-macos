@@ -72,11 +72,13 @@ public struct WorkSettings: Codable, Equatable, Sendable {
     public var hideAmounts = false
     /// 是否让内置中国大陆节假日及调休安排覆盖每周排班。
     public var chinaHolidayEnabled = false
+    /// 收入面板材质、应用深浅外观及可选背景染色，不参与工资计算。
+    public var panelAppearance = PanelAppearanceSettings()
 
     /// 创建首次使用设置，工资留空等待用户输入。
     public init() {}
 
-    /// 兼容旧版本配置；日历开关默认关闭，菜单栏旧开关迁移到对应展示指标。
+    /// 兼容旧配置；保留工资和展示迁移规则，缺少外观字段时使用低开销默认值。
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         payMode = try container.decodeIfPresent(PayMode.self, forKey: .payMode) ?? .monthly
@@ -95,6 +97,7 @@ public struct WorkSettings: Codable, Equatable, Sendable {
         showYearlyIncome = try container.decodeIfPresent(Bool.self, forKey: .showYearlyIncome) ?? true
         hideAmounts = try container.decodeIfPresent(Bool.self, forKey: .hideAmounts) ?? false
         chinaHolidayEnabled = try container.decodeIfPresent(Bool.self, forKey: .chinaHolidayEnabled) ?? false
+        panelAppearance = try container.decodeIfPresent(PanelAppearanceSettings.self, forKey: .panelAppearance) ?? PanelAppearanceSettings()
     }
 
     /// 按所选指标返回菜单栏金额，隐藏金额或仅图标时不提供金额。
@@ -129,7 +132,7 @@ public struct WorkSettings: Codable, Equatable, Sendable {
         return ranges
     }
 
-    /// 验证用户输入的业务条件，禁止保存不完整或无法估算的设置。
+    /// 验证工资作息和外观值，禁止保存无法估算或无法恢复显示的设置。
     public func validate() throws {
         guard let salary, !salary.isNaN, salary > 0 else { throw SettingsError.invalidSalary }
         var value = salary
@@ -141,6 +144,7 @@ public struct WorkSettings: Codable, Equatable, Sendable {
             guard let fixedDays, !fixedDays.isNaN, fixedDays > 0 else { throw SettingsError.invalidDivisor }
         }
         _ = try normalizedRests()
+        try panelAppearance.validate()
     }
 }
 
@@ -155,6 +159,7 @@ public enum SettingsError: String, Error, LocalizedError {
     case invalidDivisor = "请输入大于 0 的折算天数。"
     case ambiguousTime = "班次涉及不存在或重复的本地时刻，请调整作息。"
     case invalidStorage = "设置文件无法读取，请检查文件或明确保存新设置后再继续。"
+    case invalidPanelTint = "面板染色必须是六位十六进制 RGB 颜色。"
 
     /// 返回不泄露配置内容的中文错误说明。
     public var errorDescription: String? { rawValue }
