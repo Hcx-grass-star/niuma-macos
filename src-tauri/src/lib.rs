@@ -27,6 +27,8 @@ pub fn run() {
             set_autostart,
             autostart_enabled,
             update_tray_income,
+            update_tray_display,
+            main_window_visible,
             update_environment,
             open_release_page,
             install_update,
@@ -88,6 +90,10 @@ pub fn run() {
             if let WindowEvent::CloseRequested { api, .. } = event {
                 api.prevent_close();
                 let _ = window.hide();
+                if window.label() == "main" { let _ = window.emit("window-state-changed", ()); }
+            }
+            if window.label() == "main" && matches!(event, WindowEvent::Focused(_) | WindowEvent::Resized(_)) {
+                let _ = window.emit("window-state-changed", ());
             }
         })
         .run(tauri::generate_context!())
@@ -177,6 +183,36 @@ fn update_tray_income(
     #[cfg(target_os = "macos")]
     tray.set_title(if enabled { Some(text.as_str()) } else { None }).map_err(|error| error.to_string())?;
     tray.set_tooltip(Some(tooltip)).map_err(|error| error.to_string())
+}
+
+/// macOS 菜单栏显示压缩文本，Windows 通过完整提示与托盘菜单展示。
+#[tauri::command]
+fn update_tray_display(
+    app: AppHandle,
+    state: State<'_, TrayIncomeState>,
+    text: String,
+    full_text: String,
+    content: String,
+) -> Result<(), String> {
+    for (index, option) in ["icon", "current", "month"].iter().enumerate() {
+        state.display_items[index].set_checked(content == *option).map_err(|error| error.to_string())?;
+    }
+    let tooltip = if full_text.is_empty() { "牛马上班 · 点击查看".to_string() } else { full_text };
+    state.item.set_text(&tooltip).map_err(|error| error.to_string())?;
+    let tray = app.tray_by_id("main").ok_or("托盘图标尚未就绪")?;
+    #[cfg(target_os = "macos")]
+    tray.set_title(if text.is_empty() { None } else { Some(text.as_str()) }).map_err(|error| error.to_string())?;
+    #[cfg(not(target_os = "macos"))]
+    let _ = text;
+    tray.set_tooltip(Some(tooltip)).map_err(|error| error.to_string())
+}
+
+/// 返回真实显示与最小化状态，供前端暂停隐藏页面的刷新任务。
+#[tauri::command]
+fn main_window_visible(app: AppHandle) -> Result<bool, String> {
+    let window = app.get_webview_window("main").ok_or("窗口尚未就绪")?;
+    Ok(window.is_visible().map_err(|error| error.to_string())?
+        && !window.is_minimized().map_err(|error| error.to_string())?)
 }
 
 /// 从正式应用包返回真实版本与操作系统，避免前端硬编码版本导致重复提示。
@@ -295,5 +331,6 @@ fn show_main_window(app: &AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.show();
         let _ = window.set_focus();
+        let _ = window.emit("window-state-changed", ());
     }
 }

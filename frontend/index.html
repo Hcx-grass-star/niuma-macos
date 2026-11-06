@@ -33,9 +33,10 @@
           <div class="label year-basis">按当前工资和排班回算</div>
         </section>
       </div>
+      <p id="countdown-summary" class="countdown-summary" hidden></p>
       <p id="quote" class="quote">设置一下，看看时间值多少钱。</p>
       <div id="update-banner" class="update-banner" role="status" hidden><span id="update-title"></span><button id="banner-details" type="button">更新说明</button><button id="banner-download" type="button">前往下载</button></div>
-      <footer><button id="open-pet" type="button" hidden>桌面宠物</button><button id="open-settings" type="button">⚙ 设置</button></footer>
+      <footer><button id="open-countdowns" type="button">倒计时</button><button id="open-pet" type="button" hidden>桌面宠物</button><button id="open-settings" type="button">⚙ 设置</button></footer>
     </section>
     <form id="settings" class="panel settings" hidden>
       <div class="toolbar"><button id="back" class="icon" type="button" aria-label="返回">‹</button><strong>工资与作息</strong><span class="platform">仅本机</span></div>
@@ -56,6 +57,7 @@
       </fieldset>
       <label class="check"><input id="encouragement" type="checkbox" checked /> 显示鼓励文案</label>
       <label>菜单栏／托盘显示<select id="tray-content"><option value="icon">仅图标</option><option value="current">当前班次已赚</option><option value="month">本月预估已赚</option></select></label>
+      <button id="configure-menu" type="button" class="menu-configure">倒计时与菜单栏宽度</button>
       <label class="check"><input id="autostart" type="checkbox" /> 登录后自动启动</label>
       <section class="updates" aria-label="应用更新">
         <strong>应用更新</strong><p id="app-version">当前版本：读取中</p>
@@ -66,6 +68,18 @@
       </section>
       <p class="settings-note">保存后会重算本班、本月及本年预估收入，显示金额可能变化。</p>
       <p id="error" class="error" role="alert" hidden></p>
+      <button class="save" type="submit">保存并返回</button>
+    </form>
+    <form id="countdown-settings" class="panel settings" hidden>
+      <div class="toolbar"><button id="countdown-back" class="icon" type="button" aria-label="取消倒计时修改">‹</button><strong>倒计时与菜单栏</strong></div>
+      <p class="settings-note">固定事件独立使用；下班倒计时沿用已保存作息。最多 20 条。</p>
+      <label>菜单栏内容<select id="menu-mode"><option value="icon">仅图标</option><option value="income">当前收入</option><option value="countdown">主倒计时</option><option value="both">收入与主倒计时</option></select></label>
+      <label>主倒计时<select id="countdown-primary"></select></label>
+      <label>菜单栏总宽度<select id="menu-width-mode"><option value="auto">自动</option><option value="80">窄 · 80 pt</option><option value="120">标准 · 120 pt</option><option value="180">宽 · 180 pt</option><option value="custom">自定义</option></select><input id="menu-width-custom" type="number" min="60" max="240" step="1" aria-label="自定义菜单栏宽度" hidden /></label>
+      <p class="settings-note">宽度包含图标。窄宽度优先保留时间，完整内容保留在悬停提示中。跨平台版按宽度压缩文本，实际托盘宽度由系统决定；Windows 通过悬停提示和托盘菜单展示。</p>
+      <div id="countdown-rows"></div>
+      <div class="row"><select id="countdown-preset" aria-label="倒计时预设"><option>离职</option><option>放假</option><option>自定义</option><option>下班</option></select><button id="countdown-add" type="button">添加</button></div>
+      <p id="countdown-error" class="error" role="alert"></p>
       <button class="save" type="submit">保存并返回</button>
     </form>
   </main>

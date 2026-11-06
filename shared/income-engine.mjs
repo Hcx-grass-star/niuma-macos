@@ -223,3 +223,18 @@ export function menuBarPresentation(settings, snapshot) {
   const amount = settings?.hidden === true || content === 'icon' ? null : content === 'month' ? snapshot.monthToDateAmount : snapshot.amount;
   return { content, label, amount: amount ?? null };
 }
+
+/** 有界枚举后续排班边界，供非计薪状态停止秒级轮询。 */
+export function nextIncomeBoundary(settings, now = new Date()) {
+  if (!settings) return null;
+  const schedule = normalizedSchedule(settings);
+  const candidates = [new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime()];
+  for (let offset = -1; offset <= 7; offset += 1) {
+    const day = new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset);
+    if (!isScheduledDate(day, settings)) continue;
+    for (const minute of [schedule.start, schedule.end, ...schedule.rests.flatMap(r => [r.start, r.end])]) {
+      const point = new Date(day); point.setMinutes(minute); candidates.push(point.getTime());
+    }
+  }
+  return Math.min(...candidates.filter(t => t > now.getTime()));
+}

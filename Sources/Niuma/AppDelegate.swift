@@ -29,6 +29,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var settingsWindow: SettingsWindowController?
     /// 至多一个刷新任务，隐藏且仅图标时为空。
     private var refreshTimer: Timer?
+    /// 独立配置避免改变旧工资格式。
+    private var countdowns = CountdownPreferences()
+    /// 仅在编辑期间持有倒计时窗口。
+    private var countdownWindow: CountdownWindowController?
+    /// 倒计时读取错误独立显示，不阻断原收入功能。
+    private var countdownError: String?
+    /// 倒计时存储沿用应用专属目录。
+    private var countdownStore: CountdownStore { CountdownStore(directory: store.directory) }
     /// 读取配置失败时保留错误，不静默生成示例工资。
     private var configurationError: String?
     /// 独立于工资计算的公开版本检查和检查偏好。
@@ -46,6 +54,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         do { settings = try store.load() }
         catch { configurationError = error.localizedDescription }
+        do { countdowns = try countdownStore.load() }
+        catch { countdownError = error.localizedDescription }
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         item.button?.target = self
         item.button?.action = #selector(handleStatusClick)
@@ -62,7 +72,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         NotificationCenter.default.addObserver(self, selector: #selector(environmentChanged),
                                                name: .NSSystemClockDidChange, object: nil)
         refresh()
-        if settings == nil { showSettings() }
+        if settings == nil && countdowns.events.isEmpty { showSettings() }
         updates.start()
         do { try ManagedInstallation.confirmStartup() }
         catch { showAlert(error.localizedDescription) }
@@ -90,7 +100,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     /// 重复打开现有应用时复用同一个菜单栏和设置窗口。
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        if settings == nil { showSettings() }
+        if settings == nil && countdowns.events.isEmpty { showSettings() }
         else { toggleIncomePanel() }
         return false
     }
@@ -106,6 +116,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             item.state = (settings?.menuBarDisplay ?? .icon) == display ? .on : .off
             menu.addItem(item)
         }
+        let countdownItem = NSMenuItem(title: "倒计时与菜单栏…", action: #selector(openCountdownsFromMenu), keyEquivalent: "")
+        countdownItem.target = self
+        menu.addItem(countdownItem)
         menu.addItem(.separator())
         let settingsItem = NSMenuItem(title: "设置…", action: #selector(openSettingsFromMenu), keyEquivalent: "")
         settingsItem.target = self
@@ -118,7 +131,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     /// 明确选择后保存展示偏好，不改变金额隐藏状态或工资排班。
     @objc private func changeMenuBarDisplay(_ sender: NSMenuItem) {
-        guard var next = settings else { showSettings(); return }
+        var preferences = countdowns
+        preferences.menuMode = sender.tag == 0 ? .icon : .income
+        do { try countdownStore.save(preferences); countdowns = preferences }
+        catch { showAlert(error.localizedDescription); return }
+        guard var next = settings else {
+            refresh()
+            if sender.tag != 0 { showSettings() }
+            return
+        }
         next.menuBarDisplay = MenuBarDisplay.allCases[sender.tag]
         next.menuBarIncome = next.menuBarDisplay != .icon
         do { try save(next) }
@@ -130,6 +151,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         if income != nil && incomePanel.isVisible { incomePanel.close() }
         else if let button = statusItem?.button {
             let controller = IncomeViewController()
+            controller.onCountdowns = { [weak self] in self?.showCountdowns() }
             controller.onSettings = { [weak self] in self?.showSettings() }
             controller.onPrivacy = { [weak self] in self?.togglePrivacy() }
             income = controller
@@ -160,38 +182,103 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }
     }
 
-    /// 更新收入及菜单栏，并仅为可见、会变化的金额安排刷新。
+    /// 一个调度器同时服务收入和倒计时，隐藏输出不参与刷新。
     @objc private func refresh() {
         refreshTimer?.invalidate()
         refreshTimer = nil
+        let now = Date()
+        let snapshot: IncomeSnapshot
         do {
-            let snapshot = try incomeEngine.evaluate(settings, at: Date())
+            snapshot = try incomeEngine.evaluate(settings, at: now)
             income?.render(snapshot, settings: settings, error: configurationError)
-            if let income, incomePanel.contentLayoutRect.size != income.preferredContentSize {
-                incomePanel.setContentSize(income.preferredContentSize)
-            }
-            guard let button = statusItem?.button else { return }
-            let menuAmount = settings?.menuBarAmount(in: snapshot)
-            let title = menuAmount.map { " " + IncomeViewController.money($0) } ?? ""
-            if button.title != title { button.title = title }
-            let toolTip = AppBuildChannel.current.displayName + " · " + (menuAmount == nil ? "左键查看收入，右键选择显示内容" : (settings?.menuBarDisplay.title ?? ""))
-            if button.toolTip != toolTip { button.toolTip = toolTip }
-            let needsUpdates = (income != nil && incomePanel.isVisible) || (settings?.menuBarDisplay != .icon && settings?.hideAmounts == false)
-            guard needsUpdates, configurationError == nil else { return }
-            let delay: TimeInterval?
-            if snapshot.phase == .working { delay = 1 }
-            else { delay = snapshot.nextBoundary.map { max(0.1, $0.timeIntervalSinceNow) } }
-            if let delay {
-                let timer = Timer(timeInterval: delay, target: self, selector: #selector(refresh), userInfo: nil, repeats: false)
-                timer.tolerance = min(1, delay * 0.1)
-                RunLoop.main.add(timer, forMode: .common)
-                refreshTimer = timer
-            }
         } catch {
-            let empty = try! IncomeEngine().evaluate(nil, at: Date())
-            income?.render(empty, settings: settings, error: error.localizedDescription)
-            statusItem?.button?.title = ""
+            snapshot = try! IncomeEngine().evaluate(nil, at: now)
+            income?.render(snapshot, settings: settings, error: error.localizedDescription)
         }
+        let engine = CountdownEngine()
+        let results: [CountdownSnapshot]
+        do { results = try engine.evaluate(countdowns.events, work: settings, at: now) }
+        catch { income?.renderCountdowns([]); countdownError = error.localizedDescription; statusItem?.button?.toolTip = error.localizedDescription; return }
+        income?.renderCountdowns(results)
+        if let income, incomePanel.contentLayoutRect.size != income.preferredContentSize {
+            incomePanel.setContentSize(income.preferredContentSize)
+        }
+        let mode = countdowns.menuMode ?? (settings?.menuBarIncome == true ? .income : .icon)
+        let primary = results.first(where: { $0.event.id == countdowns.menuCountdownID }) ?? results.first
+        let showCountdown = mode == .countdown || mode == .both
+        let showIncome = (mode == .income || mode == .both) && settings?.hideAmounts != true && (settings?.menuBarDisplay == .month ? snapshot.monthToDateAmount : snapshot.amount) != nil
+        let selectedAmount = settings?.menuBarDisplay == .month ? snapshot.monthToDateAmount : snapshot.amount
+        let money = showIncome ? IncomeViewController.money(selectedAmount) : ""
+        let countdownText = showCountdown ? primary?.menuText ?? "" : ""
+        let fullText = [money, countdownText].filter { !$0.isEmpty }.joined(separator: " · ")
+        if let item = statusItem, let button = item.button {
+            item.length = countdowns.menuWidth.map { CGFloat($0) } ?? NSStatusItem.variableLength
+            button.font = .monospacedDigitSystemFont(ofSize: 11, weight: .regular)
+            button.imagePosition = .imageLeft
+            let available = countdowns.menuWidth.map { max(24, $0 - 32) }
+            let text = fittedMenuText(fullText, countdown: showCountdown ? primary : nil, width: available)
+            let title = text.isEmpty ? "" : " " + text
+            if button.title != title { button.title = title }
+            button.toolTip = countdownError ?? (fullText.isEmpty ? "牛马上班 · 点击查看" : fullText)
+            button.setAccessibilityLabel(fullText.isEmpty ? "牛马上班" : fullText)
+        }
+        let incomeVisible = ((income != nil && incomePanel.isVisible) || showIncome) && settings?.hideAmounts != true
+        var delay = engine.refreshDelay(results, panelVisible: (income != nil && incomePanel.isVisible), menuID: showCountdown ? primary?.event.id : nil, incomeActive: incomeVisible && snapshot.phase == .working)
+        if incomeVisible, let boundary = snapshot.nextBoundary {
+            let boundaryDelay = max(0.1, boundary.timeIntervalSince(now))
+            delay = delay.map { min($0, boundaryDelay) } ?? boundaryDelay
+        }
+        if let delay {
+            let timer = Timer(timeInterval: delay, target: self, selector: #selector(refresh), userInfo: nil, repeats: false)
+            timer.tolerance = delay <= 1 ? 0.1 : min(1, delay * 0.1)
+            RunLoop.main.add(timer, forMode: .common)
+            refreshTimer = timer
+        }
+    }
+
+    /// 固定宽度内优先保留倒计时时间，完整内容始终放在悬停提示中。
+    private func fittedMenuText(_ text: String, countdown: CountdownSnapshot?, width: Double?) -> String {
+        guard let width else { return text }
+        let attributes: [NSAttributedString.Key: Any] = [.font: NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .regular)]
+        let fits: (String) -> Bool = { ($0 as NSString).size(withAttributes: attributes).width <= width }
+        if fits(text) { return text }
+        if let countdown {
+            let time = countdown.phase == .pending && countdown.remainingSeconds >= 86400 ? "\(Int(ceil(Double(countdown.remainingSeconds) / 86400)))天" : countdown.detailText
+            var title = countdown.event.title
+            while !title.isEmpty {
+                let candidate = title + "… " + time
+                if fits(candidate) { return candidate }
+                title.removeLast()
+            }
+            if fits(time) { return time }
+            if countdown.phase == .pending, countdown.remainingSeconds < 86400 {
+                let short = String(time.prefix(5))
+                if fits(short) { return short }
+            }
+        }
+        var clipped = text
+        while !clipped.isEmpty && !fits(clipped + "…") { clipped.removeLast() }
+        return clipped.isEmpty ? "…" : clipped + "…"
+    }
+
+    /// 保存成功后发布倒计时设置，失败不会覆盖当前状态。
+    private func saveCountdowns(_ next: CountdownPreferences) throws {
+        try countdownStore.save(next)
+        countdowns = next; countdownError = nil
+        refresh()
+    }
+
+    /// 独立入口可用于未填写工资的固定日期倒计时。
+    private func showCountdowns() {
+        if income != nil { incomePanel.close() }
+        if countdownWindow?.window?.isVisible != true {
+            countdownWindow = CountdownWindowController(preferences: countdowns, legacyIncome: settings?.menuBarIncome == true, onSave: { [weak self] next in try self?.saveCountdowns(next) })
+            countdownWindow?.onClose = { [weak self] in self?.countdownWindow = nil; self?.reclaimClosedViews() }
+        }
+        countdownWindow?.showWindow(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        countdownWindow?.window?.makeKeyAndOrderFront(nil)
+        if let countdownError { showAlert(countdownError) }
     }
 
     /// 唤醒、时区或系统时间变化时直接重新估算，不追赶计时器事件。
@@ -226,6 +313,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             throw NSError(domain: Self.identifier, code: 1,
                           userInfo: [NSLocalizedDescriptionKey: "登录启动尚未关闭，未清除工资设置。请检查系统设置后重试。"])
         }
+        try countdownStore.clear()
+        countdowns = CountdownPreferences()
+        countdownWindow?.close()
         try store.clear()
         updates.reset()
         settings = nil
@@ -245,6 +335,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                                                            DispatchQueue.main.async { [weak self] in self?.toggleIncomePanel() }
                                                        },
                                                        onReset: { [weak self] in try self?.reset() })
+            settingsWindow?.onCountdowns = { [weak self] in self?.showCountdowns() }
             settingsWindow?.onClose = { [weak self] in
                 self?.updates.onChange = nil
                 self?.settingsWindow = nil
@@ -275,10 +366,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         commands.addItem(update)
         commands.addItem(.separator())
         commands.addItem(NSMenuItem(title: "退出牛马上班", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+        let countdownItem = NSMenuItem(title: "倒计时与菜单栏…", action: #selector(openCountdownsFromMenu), keyEquivalent: "d")
+        countdownItem.target = self
+        commands.addItem(countdownItem)
         root.submenu = commands
         menu.addItem(root)
         NSApp.mainMenu = menu
     }
+
+    /// 独立管理倒计时，不要求先保存工资。
+    @objc private func openCountdownsFromMenu() { showCountdowns() }
 
     /// 将标准设置快捷键连接到现有窗口生命周期。
     @objc private func openSettingsFromMenu() { showSettings() }

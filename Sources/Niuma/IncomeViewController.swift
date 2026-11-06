@@ -1,10 +1,37 @@
 import AppKit
 import NiumaCore
 
-/// 展示当前班次、本月和本年预估收入、工作状态和一句鼓励。
+/// 使用语义颜色绘制轻量圆角卡片，随系统外观更新而无需背景动画。
+@MainActor
+private final class IncomePanelSurface: NSView {
+    /// 收入卡片使用低饱和强调色，倒计时区域使用中性底色。
+    let accented: Bool
+
+    /// 创建普通原生容器，不添加图像缓存或额外刷新任务。
+    init(accented: Bool) {
+        self.accented = accented
+        super.init(frame: .zero)
+    }
+
+    /// 卡片仅由代码创建。
+    @available(*, unavailable) required init?(coder: NSCoder) { nil }
+
+    /// 根据当前外观即时解析系统颜色，避免固定 CGColor 在深色模式失效。
+    override func draw(_ dirtyRect: NSRect) {
+        super.draw(dirtyRect)
+        let path = NSBezierPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), xRadius: 12, yRadius: 12)
+        (accented ? NSColor.systemGreen.withAlphaComponent(0.065) : NSColor.controlBackgroundColor).setFill()
+        path.fill()
+        NSColor.separatorColor.withAlphaComponent(0.35).setStroke()
+        path.lineWidth = 0.5
+        path.stroke()
+    }
+}
+
+/// 展示紧凑的收入卡片与对齐的倒计时列表；隐藏后仍由应用释放视图。
 @MainActor
 final class IncomeViewController: NSViewController {
-    /// 主线程复用人民币格式化器，避免每个金额、每秒创建 ICU 格式化状态。
+    /// 复用原生金额格式化器，避免每秒重复创建 ICU 状态。
     private static let moneyFormatter: NumberFormatter = {
         let formatter = NumberFormatter()
         formatter.numberStyle = .decimal
@@ -14,199 +41,281 @@ final class IncomeViewController: NSViewController {
         formatter.locale = Locale(identifier: "zh_CN")
         return formatter
     }()
-
-    /// 主显示金额，使用等宽数字避免按秒刷新时跳动。
-    private let amount = NSTextField(labelWithString: "—")
-    /// 当前班次状态。
-    private let status = NSTextField(labelWithString: "尚未设置")
-    /// 本班预估说明，兼顾收入含义和隐私状态。
-    private let estimate = NSTextField(labelWithString: "本班预估")
-    /// 本月截至当前的预估金额，跨月班次只计本月区间。
-    private let monthAmount = NSTextField(labelWithString: "—")
-    /// 本年累计预估金额，按当前工资和排班规则回算。
-    private let yearAmount = NSTextField(labelWithString: "—")
-    /// 本年累计金额的说明文字。
-    private let yearEstimate = NSTextField(labelWithString: "本年预估已赚")
-    /// 提醒本年金额沿用当前配置，避免被误认为历史到账记录。
-    private let yearBasis = NSTextField(labelWithString: "按当前工资和排班回算")
-    /// 可关闭的上班鼓励文案。
-    private let quote = NSTextField(wrappingLabelWithString: "设置一下，看看时间值多少钱。")
-    /// 当前班次的金额、标题及说明作为整块控制显示。
+    /// 当前收入显示块，继续尊重用户的显示开关。
     private let currentSection = NSStackView()
-    /// 本月累计的金额与标题容器。
+    /// 月度汇总金额，保留正式版既有指标。
+    private let monthAmount = NSTextField(labelWithString: "—")
+    /// 月度指标块，可由原设置隐藏。
     private let monthSection = NSStackView()
-    /// 本年累计的金额、标题与回算说明容器。
+    /// 年度指标块，可由原设置隐藏。
     private let yearSection = NSStackView()
-    /// 收入面板主布局，用于根据可见内容计算紧凑高度。
-    private let contentStack = NSStackView()
-    /// 隐藏工资的入口与可访问性描述。
+    /// 收入卡片在所有指标关闭时整体隐藏。
+    private var incomeCard: NSView?
+    /// 面板宽度由收入视图统一定义，防止弹出容器与内容尺寸漂移。
+    static let panelWidth: CGFloat = 340
+    /// 主金额使用等宽数字，保证刷新时小数点位置稳定。
+    private let amount = NSTextField(labelWithString: "—")
+    /// 顶部工作状态，颜色随当前阶段改变。
+    private let status = NSTextField(labelWithString: "尚未设置")
+    /// 年度金额作为次要信息，保持标题在上、金额在下。
+    private let yearAmount = NSTextField(labelWithString: "—")
+    /// 用户可关闭的鼓励内容，位于操作区上方。
+    private let quote = NSTextField(wrappingLabelWithString: "设置一下，看看时间值多少钱。")
+    /// 顶部隐私入口，与金额隐藏状态共用持久化设置。
     private let privacy = NSButton()
-    /// 负责打开工资作息设置的操作。
+    /// 所有内容按自然高度排布，取消旧面板的大块固定留白。
+    private let content = NSStackView()
+    /// 倒计时区域在没有启用事件时整体隐藏。
+    private let countdownSection = NSStackView()
+    /// 固定三条摘要行，不在每秒刷新时创建或销毁控件。
+    private var countdownRows: [(row: NSStackView, title: NSTextField, value: NSTextField)] = []
+    /// 列表分隔线按实际可见行数显示。
+    private var countdownSeparators: [NSBox] = []
+    /// 打开独立倒计时管理窗口。
+    var onCountdowns: (() -> Void)?
+    /// 打开工资和作息设置。
     var onSettings: (() -> Void)?
-    /// 负责保存并切换金额隐私的操作。
+    /// 保存并切换金额隐私状态。
     var onPrivacy: (() -> Void)?
 
-    /// 在可切换材质的圆角底板内容容器中布局，保证控件处于系统玻璃内部。
+    /// 创建顶部工具栏、收入卡片、倒计时列表和底部操作区。
     override func loadView() {
-        let background = IncomePanelBackgroundView(frame: NSRect(x: 0, y: 0, width: 360, height: 480))
+        let background = IncomePanelBackgroundView(frame: NSRect(x: 0, y: 0, width: Self.panelWidth, height: 380))
         view = background
         let contentView = background.contentView
-        let brand = NSTextField(labelWithString: AppBuildChannel.current.displayName)
-        brand.font = .systemFont(ofSize: 13, weight: .medium)
-        let icon = NSImageView(image: NSImage(systemSymbolName: "leaf", accessibilityDescription: nil)!)
+        let icon = NSImageView(image: NSImage(systemSymbolName: "leaf.fill", accessibilityDescription: nil)!)
         icon.contentTintColor = .systemGreen
+        icon.widthAnchor.constraint(equalToConstant: 17).isActive = true
+        icon.heightAnchor.constraint(equalToConstant: 17).isActive = true
+        let brand = label(AppBuildChannel.current.displayName, size: 12, weight: .semibold)
+        status.font = .systemFont(ofSize: 10, weight: .medium)
+        status.setContentCompressionResistancePriority(.required, for: .horizontal)
         privacy.image = NSImage(systemSymbolName: "eye", accessibilityDescription: "隐藏金额")
-        privacy.bezelStyle = .inline
+        privacy.isBordered = false
+        privacy.imagePosition = .imageOnly
         privacy.target = self
         privacy.action = #selector(togglePrivacy)
-        let header = NSStackView(views: [icon, brand, NSView(), privacy])
-        header.orientation = .horizontal
-        let title = NSTextField(labelWithString: "当前已赚")
-        title.textColor = .secondaryLabelColor
-        title.font = .systemFont(ofSize: 13)
-        amount.font = .monospacedDigitSystemFont(ofSize: 48, weight: .medium)
-        amount.alignment = .center
+        privacy.widthAnchor.constraint(equalToConstant: 26).isActive = true
+        privacy.heightAnchor.constraint(equalToConstant: 26).isActive = true
+        let header = horizontal([icon, brand, NSView(), status, privacy], spacing: 7)
+
+        amount.font = .monospacedDigitSystemFont(ofSize: 40, weight: .semibold)
+        amount.textColor = .labelColor
         amount.lineBreakMode = .byTruncatingMiddle
         amount.setAccessibilityIdentifier("currentIncome")
-        status.font = .systemFont(ofSize: 12, weight: .medium)
-        status.textColor = .systemGreen
-        estimate.font = .systemFont(ofSize: 11)
-        estimate.textColor = .secondaryLabelColor
-        monthAmount.font = .monospacedDigitSystemFont(ofSize: 22, weight: .medium)
-        monthAmount.alignment = .center
-        monthAmount.lineBreakMode = .byTruncatingMiddle
-        monthAmount.setAccessibilityIdentifier("monthToDateIncome")
-        yearAmount.font = .monospacedDigitSystemFont(ofSize: 22, weight: .medium)
-        yearAmount.alignment = .center
+        yearAmount.font = .monospacedDigitSystemFont(ofSize: 20, weight: .medium)
+        yearAmount.textColor = .labelColor
         yearAmount.lineBreakMode = .byTruncatingMiddle
         yearAmount.setAccessibilityIdentifier("yearToDateIncome")
-        yearEstimate.font = .systemFont(ofSize: 11)
-        yearEstimate.textColor = .secondaryLabelColor
-        yearBasis.font = .systemFont(ofSize: 11)
-        yearBasis.textColor = .secondaryLabelColor
-        quote.font = .systemFont(ofSize: 12)
+        monthAmount.font = .monospacedDigitSystemFont(ofSize: 20, weight: .medium)
+        monthAmount.lineBreakMode = .byTruncatingMiddle
+        monthAmount.setAccessibilityIdentifier("monthToDateIncome")
+        for (section, title, value) in [(currentSection, "当前已赚", amount), (monthSection, "本月预估已赚", monthAmount), (yearSection, "本年预估已赚", yearAmount)] {
+            section.orientation = .vertical
+            section.alignment = .leading
+            section.spacing = 5
+            let heading = label(title, size: section === currentSection ? 11 : 10, secondary: true)
+            section.addArrangedSubview(heading)
+            section.addArrangedSubview(value)
+            value.widthAnchor.constraint(equalTo: section.widthAnchor).isActive = true
+        }
+        let income = vertical([currentSection, monthSection, yearSection], spacing: 12)
+        let incomeCard = card(income, accented: true, inset: 16)
+        self.incomeCard = incomeCard
+
+        let countdownList = vertical([], spacing: 0)
+        for index in 0..<3 {
+            let name = label("", size: 12)
+            name.lineBreakMode = .byTruncatingTail
+            name.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+            name.setContentHuggingPriority(.defaultLow, for: .horizontal)
+            let value = label("", size: 12, weight: .medium)
+            value.font = .monospacedDigitSystemFont(ofSize: 12, weight: .medium)
+            value.alignment = .right
+            value.lineBreakMode = .byTruncatingTail
+            value.setContentCompressionResistancePriority(.required, for: .horizontal)
+            let row = horizontal([name, value], spacing: 10)
+            row.distribution = .fill
+            row.heightAnchor.constraint(equalToConstant: 35).isActive = true
+            value.widthAnchor.constraint(lessThanOrEqualTo: row.widthAnchor, multiplier: 0.72).isActive = true
+            countdownRows.append((row, name, value))
+            countdownList.addArrangedSubview(row)
+            row.widthAnchor.constraint(equalTo: countdownList.widthAnchor).isActive = true
+            if index < 2 {
+                let line = separator()
+                countdownSeparators.append(line)
+                countdownList.addArrangedSubview(line)
+                line.widthAnchor.constraint(equalTo: countdownList.widthAnchor).isActive = true
+            }
+        }
+        let clock = NSImageView(image: NSImage(systemSymbolName: "clock", accessibilityDescription: nil)!)
+        clock.contentTintColor = .secondaryLabelColor
+        clock.widthAnchor.constraint(equalToConstant: 12).isActive = true
+        clock.heightAnchor.constraint(equalToConstant: 12).isActive = true
+        let countdownHeader = horizontal([clock, label("倒计时", size: 10, weight: .medium, secondary: true), NSView()], spacing: 5)
+        countdownSection.orientation = .vertical
+        countdownSection.alignment = .leading
+        countdownSection.spacing = 7
+        countdownSection.addArrangedSubview(countdownHeader)
+        let countdownCard = card(countdownList, accented: false, inset: 12)
+        countdownSection.addArrangedSubview(countdownCard)
+        countdownCard.widthAnchor.constraint(equalTo: countdownSection.widthAnchor).isActive = true
+        countdownSection.isHidden = true
+
+        quote.font = .systemFont(ofSize: 10)
         quote.textColor = .secondaryLabelColor
         quote.alignment = .center
-        let settings = NSButton(title: "设置", target: self, action: #selector(openSettings))
-        settings.bezelStyle = .inline
-        let quit = NSButton(title: "退出", target: NSApp, action: #selector(NSApplication.terminate(_:)))
-        quit.bezelStyle = .inline
-        let footer = NSStackView(views: [NSView(), settings, quit])
-        footer.orientation = .horizontal
-        footer.spacing = 12
-        let separator = NSBox()
-        separator.boxType = .separator
-        let monthTitle = NSTextField(labelWithString: "本月预估已赚")
-        monthTitle.font = .systemFont(ofSize: 11)
-        monthTitle.textColor = .secondaryLabelColor
-        configureSection(currentSection, views: [title, amount, estimate], identifier: "currentIncomeSection")
-        configureSection(monthSection, views: [monthAmount, monthTitle], identifier: "monthlyIncomeSection")
-        configureSection(yearSection, views: [yearAmount, yearEstimate, yearBasis], identifier: "yearlyIncomeSection")
-        let stack = contentStack
-        for child in [header, spacer(13), status, spacer(8), currentSection, monthSection, yearSection,
-                      spacer(14), quote, spacer(12), separator, footer] {
-            stack.addArrangedSubview(child)
+        quote.maximumNumberOfLines = 2
+        let countdownButton = button("倒计时", symbol: "calendar.badge.clock", action: #selector(openCountdowns))
+        let settings = button("设置", symbol: "slider.horizontal.3", action: #selector(openSettings))
+        let quit = button("退出", symbol: "power", action: #selector(NSApplication.terminate(_:)))
+        quit.target = NSApp
+        let footer = horizontal([countdownButton, settings, NSView(), quit], spacing: 14)
+        footer.heightAnchor.constraint(equalToConstant: 26).isActive = true
+
+        content.orientation = .vertical
+        content.alignment = .leading
+        content.spacing = 14
+        content.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(content)
+        for item in [header, incomeCard, countdownSection, quote, separator(), footer] {
+            content.addArrangedSubview(item)
+            item.widthAnchor.constraint(equalTo: content.widthAnchor).isActive = true
         }
-        stack.detachesHiddenViews = true
-        stack.orientation = .vertical
-        stack.alignment = .centerX
-        stack.spacing = 7
-        stack.translatesAutoresizingMaskIntoConstraints = false
-        contentView.addSubview(stack)
+        content.setCustomSpacing(8, after: quote)
         NSLayoutConstraint.activate([
-            stack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 22),
-            stack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -22),
-            stack.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 18),
-            stack.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -16),
-            header.widthAnchor.constraint(equalTo: stack.widthAnchor),
-            footer.widthAnchor.constraint(equalTo: stack.widthAnchor),
-            separator.widthAnchor.constraint(equalTo: stack.widthAnchor),
-            currentSection.widthAnchor.constraint(equalTo: stack.widthAnchor),
-            monthSection.widthAnchor.constraint(equalTo: stack.widthAnchor),
-            yearSection.widthAnchor.constraint(equalTo: stack.widthAnchor),
-            amount.widthAnchor.constraint(equalTo: currentSection.widthAnchor),
-            yearAmount.widthAnchor.constraint(equalTo: yearSection.widthAnchor),
-            monthAmount.widthAnchor.constraint(equalTo: monthSection.widthAnchor),
-            quote.widthAnchor.constraint(lessThanOrEqualTo: stack.widthAnchor)
+            content.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 18),
+            content.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -18),
+            content.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 14),
+            content.bottomAnchor.constraint(lessThanOrEqualTo: view.bottomAnchor, constant: -12)
         ])
+        resizePanel()
     }
 
-    /// 同步金额、隐私及外观；材质内部去重，错误时不展示旧金额。
+    /// 同步收入、状态与隐私展示，不增加计时器或修改计算口径。
     func render(_ snapshot: IncomeSnapshot, settings: WorkSettings?, error: String? = nil) {
-        // 读取 view 会按需触发 loadView；loadViewIfNeeded() 需 macOS 14，故不直接调用。
         _ = view
         (view as? IncomePanelBackgroundView)?.apply(settings?.panelAppearance ?? PanelAppearanceSettings())
+        currentSection.isHidden = settings?.showCurrentIncome == false
+        monthSection.isHidden = settings?.showMonthlyIncome == false
+        yearSection.isHidden = settings?.showYearlyIncome == false
+        incomeCard?.isHidden = currentSection.isHidden && monthSection.isHidden && yearSection.isHidden
         let hidden = settings?.hideAmounts == true
-        var layoutChanged = preferredContentSize.height == 0
         amount.stringValue = hidden ? "••••" : Self.money(snapshot.amount)
-        let amountSize: CGFloat = amount.stringValue.count > 13 ? 30 : 48
-        if amount.font?.pointSize != amountSize {
-            layoutChanged = true
-            amount.font = .monospacedDigitSystemFont(ofSize: amountSize, weight: .medium)
-        }
+        amount.font = .monospacedDigitSystemFont(ofSize: amount.stringValue.count > 13 ? 27 : 40, weight: .semibold)
         monthAmount.stringValue = hidden ? "••••" : Self.money(snapshot.monthToDateAmount)
-        let monthAmountSize: CGFloat = monthAmount.stringValue.count > 13 ? 18 : 22
-        if monthAmount.font?.pointSize != monthAmountSize {
-            layoutChanged = true
-            monthAmount.font = .monospacedDigitSystemFont(ofSize: monthAmountSize, weight: .medium)
-        }
         yearAmount.stringValue = hidden ? "••••" : Self.money(snapshot.yearToDateAmount)
-        let yearAmountSize: CGFloat = yearAmount.stringValue.count > 13 ? 18 : 22
-        if yearAmount.font?.pointSize != yearAmountSize {
-            layoutChanged = true
-            yearAmount.font = .monospacedDigitSystemFont(ofSize: yearAmountSize, weight: .medium)
-        }
+        yearAmount.font = .monospacedDigitSystemFont(ofSize: yearAmount.stringValue.count > 17 ? 16 : 20, weight: .medium)
         let labels: [WorkPhase: String] = [
             .unconfigured: "尚未设置", .before: "尚未上班", .working: "上班中",
             .resting: "休息中", .finished: "本班已结束", .off: "休息日"
         ]
-        status.stringValue = error == nil ? labels[snapshot.phase]! : "需要检查设置"
-        if error == nil, settings?.chinaHolidayEnabled == true,
-           let reason = snapshot.scheduleReason, ["节假日休息", "调休上班"].contains(reason) {
-            status.stringValue += " · " + reason
-        }
-        status.toolTip = snapshot.scheduleReason
-        let quoteText = error ?? encouragement(for: snapshot)
-        layoutChanged = layoutChanged
-            || currentSection.isHidden != (settings?.showCurrentIncome == false)
-            || monthSection.isHidden != (settings?.showMonthlyIncome == false)
-            || yearSection.isHidden != (settings?.showYearlyIncome == false)
-            || quote.isHidden != (error == nil && settings?.encouragement == false)
-            || quote.stringValue != quoteText
-        currentSection.isHidden = settings?.showCurrentIncome == false
-        monthSection.isHidden = settings?.showMonthlyIncome == false
-        yearSection.isHidden = settings?.showYearlyIncome == false
-        quote.stringValue = quoteText
+        status.stringValue = "● " + (error == nil ? labels[snapshot.phase]! : "检查设置")
+        status.textColor = error != nil ? .systemRed : snapshot.phase == .working ? .systemGreen : .secondaryLabelColor
+        quote.stringValue = error ?? encouragement(for: snapshot)
         quote.isHidden = error == nil && settings?.encouragement == false
-        let privacyLabel = hidden ? "显示金额" : "隐藏金额"
-        if privacy.toolTip != privacyLabel {
-            privacy.toolTip = privacyLabel
-            privacy.setAccessibilityLabel(privacyLabel)
-            privacy.image = NSImage(systemSymbolName: hidden ? "eye.slash" : "eye", accessibilityDescription: privacyLabel)
-        }
-        if layoutChanged {
-            let size = NSSize(width: 360, height: max(180, contentStack.fittingSize.height + 34))
-            preferredContentSize = size
-            view.setFrameSize(size)
-        }
+        privacy.toolTip = hidden ? "显示金额" : "隐藏金额"
+        privacy.setAccessibilityLabel(privacy.toolTip)
+        privacy.image = NSImage(systemSymbolName: hidden ? "eye.slash" : "eye", accessibilityDescription: privacy.toolTip)
+        resizePanel()
     }
 
-    /// 将金额和说明组成可整体收起的区域，避免隐藏金额后留下对应标题和空白。
-    private func configureSection(_ section: NSStackView, views: [NSView], identifier: String) {
-        section.orientation = .vertical
-        section.alignment = .centerX
-        section.spacing = 7
-        section.setAccessibilityIdentifier(identifier)
-        for child in views { section.addArrangedSubview(child) }
+    /// 只更新三条复用行的值，长标题截断后可通过悬停读取全文。
+    func renderCountdowns(_ snapshots: [CountdownSnapshot]) {
+        _ = view
+        for (index, fields) in countdownRows.enumerated() {
+            let snapshot = index < snapshots.count ? snapshots[index] : nil
+            fields.row.isHidden = snapshot == nil
+            let name = snapshot?.event.title ?? ""
+            let value = snapshot?.detailText ?? ""
+            if fields.title.stringValue != name { fields.title.stringValue = name }
+            if fields.value.stringValue != value { fields.value.stringValue = value }
+            fields.row.toolTip = snapshot.map { $0.event.title + "：" + $0.detailText }
+            if index < countdownSeparators.count { countdownSeparators[index].isHidden = index + 1 >= min(3, snapshots.count) }
+        }
+        countdownSection.isHidden = snapshots.isEmpty
+        resizePanel()
     }
 
-    /// 仅在展示边界舍入人民币金额，不改变内部计算精度。
+    /// 内容高度变化时才调整面板，避免秒级计时导致窗口反复布局。
+    private func resizePanel() {
+        view.layoutSubtreeIfNeeded()
+        let size = NSSize(width: Self.panelWidth, height: ceil(content.fittingSize.height) + 26)
+        guard preferredContentSize != size else { return }
+        preferredContentSize = size
+        view.setFrameSize(size)
+    }
+
+    /// 统一系统文字样式，动态颜色保持浅色与深色外观对比度。
+    private func label(_ text: String, size: CGFloat, weight: NSFont.Weight = .regular, secondary: Bool = false) -> NSTextField {
+        let field = NSTextField(labelWithString: text)
+        field.font = .systemFont(ofSize: size, weight: weight)
+        field.textColor = secondary ? .secondaryLabelColor : .labelColor
+        return field
+    }
+
+    /// 纵向内容保持自然高度，隐藏项不保留空行。
+    private func vertical(_ views: [NSView], spacing: CGFloat) -> NSStackView {
+        let stack = NSStackView(views: views)
+        stack.orientation = .vertical
+        stack.alignment = .leading
+        stack.spacing = spacing
+        for item in views { item.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true }
+        return stack
+    }
+
+    /// 横向标题和数值沿中心对齐，弹性空间交由原生布局分配。
+    private func horizontal(_ views: [NSView], spacing: CGFloat) -> NSStackView {
+        let stack = NSStackView(views: views)
+        stack.orientation = .horizontal
+        stack.alignment = .centerY
+        stack.spacing = spacing
+        return stack
+    }
+
+    /// 卡片仅负责边距与背景，不引入单独刷新机制。
+    private func card(_ contents: NSView, accented: Bool, inset: CGFloat) -> NSView {
+        let surface = IncomePanelSurface(accented: accented)
+        contents.translatesAutoresizingMaskIntoConstraints = false
+        surface.addSubview(contents)
+        NSLayoutConstraint.activate([
+            contents.leadingAnchor.constraint(equalTo: surface.leadingAnchor, constant: inset),
+            contents.trailingAnchor.constraint(equalTo: surface.trailingAnchor, constant: -inset),
+            contents.topAnchor.constraint(equalTo: surface.topAnchor, constant: inset),
+            contents.bottomAnchor.constraint(equalTo: surface.bottomAnchor, constant: -inset)
+        ])
+        return surface
+    }
+
+    /// 低对比分隔线表达分组，避免重复边框抢占金额注意力。
+    private func separator() -> NSBox {
+        let box = NSBox()
+        box.boxType = .separator
+        return box
+    }
+
+    /// 可操作按钮保持标准 target/action 和键盘焦点，图标只提供辅助识别。
+    private func button(_ title: String, symbol: String, action: Selector) -> NSButton {
+        let button = NSButton(title: title, target: self, action: action)
+        button.isBordered = false
+        button.font = .systemFont(ofSize: 11, weight: .medium)
+        button.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
+        button.imagePosition = .imageLeading
+        button.imageHugsTitle = true
+        button.contentTintColor = .secondaryLabelColor
+        return button
+    }
+
+    /// 打开倒计时配置。
+    @objc private func openCountdowns() { onCountdowns?() }
+
+    /// 在展示边界舍入人民币，不改变核心计算精度。
     static func money(_ value: Decimal?) -> String {
         guard let value else { return "—" }
         return "¥" + (moneyFormatter.string(from: NSDecimalNumber(decimal: value)) ?? "—")
     }
 
-    /// 按当前状态和已达到的节点选取一条文案，不补播历史节点。
+    /// 按现有工作状态选择鼓励内容，不增加额外推送或节点任务。
     private func encouragement(for snapshot: IncomeSnapshot) -> String {
         switch snapshot.phase {
         case .unconfigured: return "设置一下，看看时间值多少钱。"
@@ -222,16 +331,9 @@ final class IncomeViewController: NSViewController {
         }
     }
 
-    /// 创建受约束的留白，保持收入面板的内容层级。
-    private func spacer(_ height: CGFloat) -> NSView {
-        let view = NSView()
-        view.heightAnchor.constraint(equalToConstant: height).isActive = true
-        return view
-    }
-
-    /// 将设置入口交给应用生命周期统一处理。
+    /// 工资和作息设置由应用管理生命周期。
     @objc private func openSettings() { onSettings?() }
 
-    /// 将隐私切换交给持久化层处理，失败不假装已经保存。
+    /// 由持久化层完成隐私切换，保存失败时保持原状态。
     @objc private func togglePrivacy() { onPrivacy?() }
 }

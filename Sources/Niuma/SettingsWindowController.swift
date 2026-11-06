@@ -33,6 +33,8 @@ final class SettingsWindowController: NSWindowController, NSTextFieldDelegate, N
     private let updates: UpdateController
     /// 窗口关闭时释放表单，降低后台常驻内存。
     var onClose: (() -> Void)?
+    /// 打开独立倒计时与菜单栏宽度配置，保留工资草稿。
+    var onCountdowns: (() -> Void)?
     /// 月薪或日薪选择。
     private let payMode = NSPopUpButton()
     /// 工资输入，根据隐私状态选用普通或安全文本框。
@@ -223,6 +225,7 @@ final class SettingsWindowController: NSWindowController, NSTextFieldDelegate, N
         stack.addArrangedSubview(monthlyIncomeVisible)
         stack.addArrangedSubview(yearlyIncomeVisible)
         stack.addArrangedSubview(cheer)
+        stack.addArrangedSubview(NSButton(title: "倒计时与菜单栏…", target: self, action: #selector(openCountdowns)))
         stack.addArrangedSubview(horizontal([label("菜单栏显示", secondary: false), menuIncome]))
         stack.addArrangedSubview(label("面板外观", secondary: false))
         panelGlass.state = original.panelAppearance.glassEnabled ? .on : .off
@@ -451,6 +454,9 @@ final class SettingsWindowController: NSWindowController, NSTextFieldDelegate, N
     }
 
     /// 放弃工资作息和外观草稿；立即生效的系统登录开关单独说明。
+    /// 打开独立倒计时设置，保留未保存的工资草稿。
+    @objc private func openCountdowns() { onCountdowns?() }
+
     @objc private func cancel() { close() }
 
     /// 非正式包禁用系统登录项入口；正式包展示系统实际注册状态。
@@ -495,7 +501,7 @@ final class SettingsWindowController: NSWindowController, NSTextFieldDelegate, N
     @objc private func reset() {
         let alert = NSAlert()
         alert.messageText = "清除设置并重置？"
-        alert.informativeText = "将删除本应用的工资、作息、显示及更新检查偏好，并关闭登录自动启动。应用本体和其他文件不会被删除。"
+        alert.informativeText = "将删除本应用的工资、作息、倒计时、显示及更新检查偏好，并关闭登录自动启动。应用本体和其他文件不会被删除。"
         alert.addButton(withTitle: "取消")
         alert.addButton(withTitle: "清除并重置")
         guard alert.runModal() == .alertSecondButtonReturn else { return }

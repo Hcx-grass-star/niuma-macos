@@ -1,10 +1,10 @@
 {
   "name": "niuma-cross-platform",
   "private": true,
-  "version": "0.3.3",
+  "version": "0.3.4",
   "type": "module",
   "scripts": {
-    "test:core": "node shared/income-engine.test.mjs",
+    "test:core": "node shared/income-engine.test.mjs && node shared/countdown-engine.test.mjs",
     "test:updates": "node scripts/test-updates.mjs",
     "sync:frontend": "node scripts/sync-frontend-core.mjs",
     "tauri:dev": "npm run sync:frontend && tauri dev",

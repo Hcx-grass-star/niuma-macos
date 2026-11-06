@@ -94,6 +94,10 @@ macOS 13/14 上使用 `if #available` 回退：无参 `NSApp.activate()` 与 `NS
 
 检查仅获取公开版本信息，不携带工资、排班或账号凭证。断网、限流或服务异常时，后台检查不弹错误提示，收入计算继续离线可用；手动检查会显示具体状态。发布新版的方法见 [发布与更新](docs/发布与更新.md)，初始更新功能验证见 [更新检查验证](docs/verification/update-check.md)，0.2.1 的双源验证见 [静态清单验证](docs/verification/static-update-manifest.md)。
 
+## 自定义倒计时与菜单栏
+
+新增离职、放假、自定义目标和按作息计算的下班倒计时。可选择菜单栏显示收入、主倒计时或两者，并选择自动、80/120/180 pt 或 60–240 pt 自定义宽度。原生 macOS 精确控制总宽度；Tauri 按宽度压缩文字，Windows 使用提示与托盘菜单。配置独立保存，旧工资无需迁移。详见 [功能规则](docs/倒计时与菜单栏.md) 和 [验证结果与限制](docs/verification/countdown-menubar.md)。
+
 ## 当前内容
 
 - [功能迭代清单](docs/功能迭代清单.md)：节假日与调休、排班例外、收入统计和日常体验四期规划，包含待办、验收标准及待确认规则。
@@ -120,7 +124,7 @@ macOS 13/14 上使用 `if #available` 回退：无参 `NSApp.activate()` 与 `NS
 
 ## 配置、重置与卸载
 
-工资作息使用以下配置文件，不保存收入历史，不建立专用缓存或文件日志；更新检查开关及最近自动尝试时间独立保存在系统 UserDefaults 中。Tauri 版分别使用 `niuma.settings.v1` 和 `niuma.updates.v1` 的本地存储：
+工资作息使用以下配置文件，不保存收入历史，不建立专用缓存或文件日志；更新检查开关及最近自动尝试时间独立保存在系统 UserDefaults 中。倒计时独立保存在同目录的 `countdowns.json`。Tauri 版使用 `niuma.settings.v1`、`niuma.updates.v1` 和 `niuma.countdowns.v1` 的本地存储：
 
 ```text
 ~/Library/Application Support/com.hcxgrassstar.niuma/settings.json

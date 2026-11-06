@@ -33,3 +33,5 @@ frontend/app-version.json
 frontend/holiday-calendar.mjs
 frontend/china-holidays.json
 frontend/holiday-data.mjs
+
+frontend/countdown-engine.mjs

@@ -1,5 +1,6 @@
-import { evaluateIncome, validateSettings, menuBarContent, menuBarPresentation } from './income-engine.mjs';
+import { evaluateIncome, validateSettings, menuBarContent, menuBarPresentation, nextIncomeBoundary } from './income-engine.mjs';
 import { holidayDataStatus } from './holiday-calendar.mjs';
+import { initCountdowns, countdownState, menuPresentation, chooseIncomeDisplay } from './countdowns.js';
 import { initUpdates } from './updates.js';
 
 /** 默认配置；工资为空时显示首次使用状态，不生成示例收入。 */
@@ -25,6 +26,14 @@ const state = { settings: loadSettings(), hidden: false };
 state.hidden = state.settings?.hidden === true;
 /** 最近一次成功或无需发送的托盘展示签名，避免重复调用原生层。 */
 let lastTrayIncomeSignature = null;
+/** 全应用收入和倒计时共用的唯一刷新任务。 */
+let refreshTimer = null;
+/** 原生窗口可见性由平台层确认，隐藏后停止页面刷新。 */
+let nativeVisible = true;
+/** 原生通信只发送最新状态，慢调用不会形成无限队列。 */
+let pendingTray = null;
+/** 同一时刻只执行一次原生托盘更新。 */
+let trayBusy = false;
 const $ = (id) => document.getElementById(id);
 
 /** 从跨平台本地存储读取设置；损坏数据回退到首次使用状态。 */
@@ -33,40 +42,59 @@ function loadSettings() { try { return { ...defaults, ...(JSON.parse(localStorag
 function saveSettings(settings) { localStorage.setItem(storageKey, JSON.stringify(settings)); }
 /** 将金额格式化为人民币展示值，内部计算仍保留浮点精度。 */
 function money(value) { return value == null ? '—' : `¥${value.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`; }
-/** 仅在托盘展示变化时同步原生提示和菜单；浏览器预览环境保持无副作用。 */
-async function syncTrayIncome(snapshot, settings) {
-  const presentation = menuBarPresentation(settings, snapshot);
-  const enabled = presentation.amount != null;
-  const text = enabled ? money(presentation.amount) : '';
-  const signature = `${presentation.content}:${enabled}:${text}`;
-  if (signature === lastTrayIncomeSignature) return;
-  if (!window.__TAURI__?.core?.invoke) { lastTrayIncomeSignature = signature; return; }
+/** 只把变化后的文本提交原生层，串行发送并合并等待中的更新。 */
+async function syncTrayIncome(presentation) {
+  pendingTray = presentation;
+  if (trayBusy) return;
+  trayBusy = true;
   try {
-    await window.__TAURI__.core.invoke('update_tray_income', { enabled, text, content: presentation.content });
-    lastTrayIncomeSignature = signature;
-  } catch (error) {
-    console.error('托盘收入同步失败', error);
-  }
+    while (pendingTray) {
+      const value = pendingTray; pendingTray = null;
+      const signature = JSON.stringify(value);
+      if (signature === lastTrayIncomeSignature) continue;
+      if (window.__TAURI__?.core?.invoke) await window.__TAURI__.core.invoke('update_tray_display', { text: value.text, fullText: value.full, content: value.content });
+      lastTrayIncomeSignature = signature;
+    }
+  } catch (error) { console.error('托盘显示同步失败', error); }
+  finally { trayBusy = false; }
 }
+/** 只写变化的文本，不反复触发相同的布局与辅助功能播报。 */
+function setText(id, value) { if ($(id).textContent !== value) $(id).textContent = value; }
 /** 根据同一收入快照更新首页及用户启用的托盘金额。 */
 function render() {
+  clearTimeout(refreshTimer); refreshTimer = null;
+  const now = new Date();
+  const homeVisible = nativeVisible && !$('home').hidden;
+  const info = countdownState(state.settings, now, homeVisible);
   const settings = state.settings?.salary == null ? null : state.settings;
-  const snapshot = evaluateIncome(settings, new Date());
-  const labels = { unconfigured: ['尚未设置', '等待设置', '设置一下，看看时间值多少钱。'], before: ['尚未上班', '等待上班时间', '慢慢来，今天也会有收获。'], working: ['上班中', '自动计算中', '每一秒，都在为生活攒一点底气。'], resting: ['休息中', '休息期间暂停计薪', '休息一下，生活也需要留白。'], finished: ['本班已结束', '本班计算完成', '今天的努力，已经攒起来了。'], off: ['休息日', '今天好好休息', '好好生活，也是一件正经事。'] };
-  const [phase, , quote] = labels[snapshot.phase];
-  const basis = settings?.chinaHolidayEnabled === true && ['节假日休息', '调休上班'].includes(snapshot.scheduleReason) ? ` · ${snapshot.scheduleReason}` : '';
-  $('phase').textContent = phase + basis; $('phase').title = snapshot.scheduleReason ?? ''; $('quote').textContent = quote;
-  $('current-income-section').hidden = state.settings?.showCurrentIncome === false;
-  $('monthly-income-section').hidden = state.settings?.showMonthlyIncome === false;
-  $('yearly-income-section').hidden = state.settings?.showYearlyIncome === false;
-  $('status-dot').dataset.phase = snapshot.phase;
-  $('quote').hidden = settings?.encouragement === false;
-  $('amount').textContent = state.hidden ? '••••' : money(snapshot.amount);
+  const snapshot = evaluateIncome(settings, now);
   $('salary').type = state.hidden ? 'password' : 'number';
-  $('month-amount').textContent = state.hidden ? '••••' : money(snapshot.monthToDateAmount);
-  $('year-amount').textContent = state.hidden ? '••••' : money(snapshot.yearToDateAmount);
-  $('hide').textContent = state.hidden ? '◎' : '◉'; $('hide').setAttribute('aria-label', state.hidden ? '显示金额' : '隐藏金额');
-  void syncTrayIncome(snapshot, settings);
+  if (homeVisible) {
+    const labels = { unconfigured: ['尚未设置', '等待设置', '设置一下，看看时间值多少钱。'], before: ['尚未上班', '等待上班时间', '慢慢来，今天也会有收获。'], working: ['上班中', '自动计算中', '每一秒，都在为生活攒一点底气。'], resting: ['休息中', '休息期间暂停计薪', '休息一下，生活也需要留白。'], finished: ['本班已结束', '本班计算完成', '今天的努力，已经攒起来了。'], off: ['休息日', '今天好好休息', '好好生活，也是一件正经事。'] };
+    const [phase, , quote] = labels[snapshot.phase];
+    const basis = settings?.chinaHolidayEnabled === true && ['节假日休息', '调休上班'].includes(snapshot.scheduleReason) ? ` · ${snapshot.scheduleReason}` : '';
+    $('phase').textContent = phase + basis; $('phase').title = snapshot.scheduleReason ?? ''; $('quote').textContent = quote;
+    $('current-income-section').hidden = state.settings?.showCurrentIncome === false;
+    $('monthly-income-section').hidden = state.settings?.showMonthlyIncome === false;
+    $('yearly-income-section').hidden = state.settings?.showYearlyIncome === false;
+    $('status-dot').dataset.phase = snapshot.phase;
+    $('quote').hidden = settings?.encouragement === false;
+    $('amount').textContent = state.hidden ? '••••' : money(snapshot.amount);
+    $('month-amount').textContent = state.hidden ? '••••' : money(snapshot.monthToDateAmount);
+    $('year-amount').textContent = state.hidden ? '••••' : money(snapshot.yearToDateAmount);
+    $('hide').textContent = state.hidden ? '◎' : '◉'; $('hide').setAttribute('aria-label', state.hidden ? '显示金额' : '隐藏金额');
+  }
+  const income = menuBarPresentation({ ...state.settings, trayContent: menuBarContent(state.settings) === 'icon' ? 'current' : menuBarContent(state.settings) }, snapshot);
+  const presentation = menuPresentation(info, state.hidden ? '' : income.amount == null ? '' : money(income.amount));
+  presentation.content = info.menuIncome ? income.content : 'icon';
+  void syncTrayIncome(presentation);
+  const incomeVisible = (homeVisible || info.menuIncome) && !state.hidden && settings;
+  let delay = info.delay;
+  if (incomeVisible) {
+    const incomeDelay = snapshot.phase === 'working' ? 1 : Math.max(0.1, (nextIncomeBoundary(settings, now) - now.getTime()) / 1000);
+    delay = delay == null ? incomeDelay : Math.min(delay, incomeDelay);
+  }
+  if (delay != null) refreshTimer = setTimeout(render, delay * 1000);
 }
 /** 保存成功后才切换两个金额的显示状态，避免重启后意外暴露收入。 */
 function togglePrivacy() {
@@ -87,7 +115,7 @@ function updateDraftVisibility() { const monthly = $('mode').value === 'monthly'
 function openSettings() {
   const s = state.settings ?? defaults; $('show-current-income').checked = s.showCurrentIncome !== false; $('show-monthly-income').checked = s.showMonthlyIncome !== false; $('show-yearly-income').checked = s.showYearlyIncome !== false; $('mode').value = s.mode; $('salary').value = s.salary ?? ''; $('start').value = s.start; $('end').value = s.end; $('rest-enabled').checked = s.rests.length > 0; $('rest-start').value = s.rests[0]?.start ?? '12:00'; $('rest-end').value = s.rests[0]?.end ?? '13:00'; $('divisor').value = s.divisor; $('fixed-days').value = s.fixedDays; $('encouragement').checked = s.encouragement !== false; $('tray-content').value = menuBarContent(s); $('china-holiday').checked = s.chinaHolidayEnabled === true; updateHolidayStatus();
   document.querySelectorAll('.weekday').forEach((button) => { button.setAttribute('aria-pressed', String(s.weekdays.includes(Number(button.dataset.day)))); });
-  $('error').hidden = true; $('home').hidden = true; $('settings').hidden = false; updateDraftVisibility();
+  $('error').hidden = true; $('home').hidden = true; $('settings').hidden = false; updateDraftVisibility(); render();
 }
 /** 根据当前年份显示年度数据覆盖范围，缺失年份明确回退规则。 */
 function updateHolidayStatus() { const status = holidayDataStatus(new Date().getFullYear(), $('china-holiday').checked); $('holiday-status').textContent = status.message; $('holiday-status').hidden = !status.message; }
@@ -131,13 +159,26 @@ function initWeekdays() { const names = ['日', '一', '二', '三', '四', '五
 function changeTrayContent(content) {
   if (!['icon', 'current', 'month'].includes(content)) return;
   const next = { ...state.settings, trayContent: content, trayIncome: content !== 'icon' };
-  try { saveSettings(next); state.settings = next; $('tray-content').value = content; lastTrayIncomeSignature = null; render(); }
+  try { chooseIncomeDisplay(content !== 'icon'); saveSettings(next); state.settings = next; $('tray-content').value = content; lastTrayIncomeSignature = null; render(); }
   catch { window.alert('菜单栏显示设置保存失败，请重试。'); }
 }
 if (window.__TAURI__?.event?.listen) window.__TAURI__.event.listen('set-tray-content', (event) => changeTrayContent(event.payload));
 initWeekdays(); initWindowControls(); $('open-settings').addEventListener('click', openSettings); $('back').addEventListener('click', () => { $('settings').hidden = true; $('home').hidden = false; render(); }); $('settings').addEventListener('submit', submitSettings); $('mode').addEventListener('change', updateDraftVisibility); $('divisor').addEventListener('change', updateDraftVisibility); $('rest-enabled').addEventListener('change', updateDraftVisibility); $('china-holiday').addEventListener('change', updateHolidayStatus); $('autostart').addEventListener('change', () => setAutostart($('autostart').checked)); $('hide').addEventListener('click', togglePrivacy);
 if (window.__TAURI__?.event?.listen) window.__TAURI__.event.listen('open-settings', openSettings);
-render(); if (state.settings?.salary == null) openSettings(); setInterval(render, 1000);
+initCountdowns(render, () => state.settings);
+render(); if (state.settings?.salary == null) openSettings();
+/** 平台通知直接重新读取可见性，不依赖隐藏 WebView 的秒级轮询。 */
+async function refreshVisibility() {
+  try { nativeVisible = await window.__TAURI__.core.invoke('main_window_visible'); }
+  catch { nativeVisible = !document.hidden; }
+  render();
+}
+if (window.__TAURI__?.event?.listen) {
+  void window.__TAURI__.event.listen('window-state-changed', refreshVisibility);
+  void refreshVisibility();
+} else document.addEventListener('visibilitychange', () => { nativeVisible = !document.hidden; render(); });
+window.addEventListener('focus', () => { if (window.__TAURI__) void refreshVisibility(); else render(); });
+
 loadAutostart();
 void initDesktopPet();
 window.addEventListener('storage', syncSettingsFromStorage);

@@ -96,3 +96,14 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
 /* 面板显示可独立多选，隐藏区域连同标题和说明一起退出布局。 */
 .income-display label { margin: 8px 0; }
 #home footer { justify-content: flex-end; gap: 8px; }
+
+/* 倒计时列表固定高度可滚动，长标题换行不会撑破窗口。 */
+.countdown-summary { flex: 0 0 auto; margin: 0 18px 12px; max-height: 110px; overflow-y: auto; white-space: pre-line; overflow-wrap: anywhere; text-align: center; font-size: 12px; line-height: 1.8; font-variant-numeric: tabular-nums; }
+.countdown-row { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: 8px; padding: 12px; border: 1px solid #71807855; border-radius: 8px; }
+.countdown-row select, .countdown-row input[type="datetime-local"] { grid-column: 1 / -1; }
+.countdown-row input[type="text"] { min-width: 0; width: 100%; }
+.countdown-row button, #countdown-add, .menu-configure { padding: 8px; border: 1px solid #71807888; border-radius: 6px; }
+.menu-configure { margin: 0 18px 13px; }
+input[type="text"], input[type="datetime-local"] { border: 1px solid #71807855; border-radius: 6px; padding: 8px; background: transparent; color: inherit; }
+/* 添加按钮不随预设选择器压缩换行。 */
+#countdown-add { flex: 0 0 auto; min-width: 56px; white-space: nowrap; }

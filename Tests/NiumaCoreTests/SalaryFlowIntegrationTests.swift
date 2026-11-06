@@ -35,6 +35,8 @@ struct SalaryFlowIntegrationTests {
             do { try run(); print("PASS: " + name) }
             catch { failures += 1; print("FAIL: " + name + " — " + error.localizedDescription) }
         }
+        do { try CountdownIntegrationTests.run() }
+        catch { failures += 1; print("FAIL: 倒计时 — " + error.localizedDescription) }
         do { try await UpdateIntegrationTests.run() }
         catch { failures += 1; print("FAIL: 更新检查 — " + error.localizedDescription) }
         guard failures == 0 else { exit(1) }
