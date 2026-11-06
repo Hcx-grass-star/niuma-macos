@@ -1,22 +1,28 @@
 import AppKit
+import Darwin
 import NiumaInstallation
 import ServiceManagement
 import NiumaCore
 
 /// 管理唯一菜单栏入口、面板、配置和按需刷新的应用生命周期。
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
-    /// 跨更新保持稳定的应用身份，也用于配置目录和单实例判断。
-    static let identifier = "com.hcxgrassstar.niuma"
+final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
+    /// 同一环境跨更新保持身份稳定，不同环境隔离配置目录及单实例判断。
+    static let identifier = AppBuildChannel.current.bundleIdentifier
     /// 实际配置存储，不包含收入历史或按秒日志。
-    private let store = SettingsStore(directory: FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        .appendingPathComponent(identifier, isDirectory: true))
+    private let store: SettingsStore
+    /// 复用有界排班计数，避免收入按秒刷新时重复遍历本年日期。
+    private var incomeEngine = IncomeEngine()
     /// 只有成功保存的配置才能成为当前计算依据。
     private var settings: WorkSettings?
     /// 必须保留菜单栏项，否则系统会将其移除。
     private var statusItem: NSStatusItem?
-    /// 可收起的收入面板。
-    private let popover = NSPopover()
+    /// 首次查看收入时才创建窗口，纯菜单栏运行时不加载面板资源。
+    private lazy var incomePanel: IncomePanel = {
+        let panel = IncomePanel()
+        panel.delegate = self
+        return panel
+    }()
     /// 仅在面板展开期间持有原生收入视图，收起后释放。
     private var income: IncomeViewController?
     /// 当前唯一设置窗口，避免重复入口消耗资源。
@@ -26,7 +32,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     /// 读取配置失败时保留错误，不静默生成示例工资。
     private var configurationError: String?
     /// 独立于工资计算的公开版本检查和检查偏好。
-    private let updates = UpdateController()
+    private let updates: UpdateController
+
+    /// 默认按包环境选择配置；集成验证可注入独立存储与更新偏好，避免修改用户数据。
+    init(store: SettingsStore = SettingsStore(directory: FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        .appendingPathComponent(identifier, isDirectory: true)), updates: UpdateController = UpdateController()) {
+        self.store = store
+        self.updates = updates
+        super.init()
+    }
 
     /// 加载本地配置并创建菜单栏，只有首次使用才打开设置。
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -36,15 +50,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         item.button?.target = self
         item.button?.action = #selector(handleStatusClick)
         item.button?.sendAction(on: [.leftMouseUp, .rightMouseUp])
-        item.button?.setAccessibilityLabel("牛马上班")
-        item.button?.image = NSImage(systemSymbolName: "leaf", accessibilityDescription: "牛马上班")
+        item.button?.setAccessibilityLabel(AppBuildChannel.current.displayName)
+        item.button?.image = NSImage(systemSymbolName: "leaf", accessibilityDescription: AppBuildChannel.current.displayName)
         item.button?.image?.isTemplate = true
         statusItem = item
         configureMainMenu()
-        popover.behavior = .transient
-        popover.animates = false
-        popover.contentSize = NSSize(width: 360, height: 480)
-        popover.delegate = self
         NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(environmentChanged),
                                                          name: NSWorkspace.didWakeNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(environmentChanged),
@@ -73,16 +83,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         NotificationCenter.default.removeObserver(self)
     }
 
+    /// 切换到其他应用时收起收入窗口并释放视图。
+    func applicationDidResignActive(_ notification: Notification) {
+        if income != nil && incomePanel.isVisible { incomePanel.close() }
+    }
+
     /// 重复打开现有应用时复用同一个菜单栏和设置窗口。
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         if settings == nil { showSettings() }
-        else { togglePopover() }
+        else { toggleIncomePanel() }
         return false
     }
 
     /// 左键继续查看收入，右键直接选择菜单栏的展示指标。
     @objc private func handleStatusClick() {
-        guard NSApp.currentEvent?.type == .rightMouseUp else { togglePopover(); return }
+        guard NSApp.currentEvent?.type == .rightMouseUp else { toggleIncomePanel(); return }
         let menu = NSMenu()
         for (index, display) in MenuBarDisplay.allCases.enumerated() {
             let item = NSMenuItem(title: display.title, action: #selector(changeMenuBarDisplay(_:)), keyEquivalent: "")
@@ -111,28 +126,39 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     }
 
     /// 展开时按实际时间重算，收起时按需停止秒级刷新。
-    @objc private func togglePopover() {
-        if popover.isShown { popover.performClose(nil) }
+    @objc private func toggleIncomePanel() {
+        if income != nil && incomePanel.isVisible { incomePanel.close() }
         else if let button = statusItem?.button {
             let controller = IncomeViewController()
             controller.onSettings = { [weak self] in self?.showSettings() }
             controller.onPrivacy = { [weak self] in self?.togglePrivacy() }
             income = controller
-            popover.contentViewController = controller
+            incomePanel.contentViewController = controller
             refresh()
             activateApplication()
-            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
-            controller.view.window?.title = "牛马上班 · 当前收入"
-            controller.view.window?.makeKey()
+            incomePanel.show(below: button)
             refresh()
         }
     }
 
-    /// 系统关闭弹出面板后重新判断是否仍需刷新菜单栏金额。
-    func popoverDidClose(_ notification: Notification) {
-        popover.contentViewController = nil
+    /// 面板失去键盘焦点时收起，保持点击其他应用即关闭的交互。
+    func windowDidResignKey(_ notification: Notification) {
+        if income != nil && incomePanel.isVisible { incomePanel.close() }
+    }
+
+    /// 关闭后释放收入视图；下一轮事件再归还分配器中已空闲的页面。
+    func windowWillClose(_ notification: Notification) {
+        incomePanel.contentViewController = nil
         income = nil
         refresh()
+        reclaimClosedViews()
+    }
+
+    /// 留出一次事件循环释放窗口临时对象，再归还空闲页；不增加常驻轮询。
+    private func reclaimClosedViews() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            _ = malloc_zone_pressure_relief(nil, 0)
+        }
     }
 
     /// 把应用带到前台；无参 activate() 自 macOS 14 起提供，旧系统走等价选项。
@@ -146,14 +172,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         refreshTimer?.invalidate()
         refreshTimer = nil
         do {
-            let snapshot = try IncomeEngine().evaluate(settings, at: Date())
+            let snapshot = try incomeEngine.evaluate(settings, at: Date())
             income?.render(snapshot, settings: settings, error: configurationError)
-            if let income { popover.contentSize = income.preferredContentSize }
+            if let income, incomePanel.contentLayoutRect.size != income.preferredContentSize {
+                incomePanel.setContentSize(income.preferredContentSize)
+            }
             guard let button = statusItem?.button else { return }
             let menuAmount = settings?.menuBarAmount(in: snapshot)
-            button.title = menuAmount.map { " " + IncomeViewController.money($0) } ?? ""
-            button.toolTip = menuAmount == nil ? "牛马上班 · 左键查看收入，右键选择显示内容" : "牛马上班 · " + (settings?.menuBarDisplay.title ?? "")
-            let needsUpdates = popover.isShown || (settings?.menuBarDisplay != .icon && settings?.hideAmounts == false)
+            let title = menuAmount.map { " " + IncomeViewController.money($0) } ?? ""
+            if button.title != title { button.title = title }
+            let toolTip = AppBuildChannel.current.displayName + " · " + (menuAmount == nil ? "左键查看收入，右键选择显示内容" : (settings?.menuBarDisplay.title ?? ""))
+            if button.toolTip != toolTip { button.toolTip = toolTip }
+            let needsUpdates = (income != nil && incomePanel.isVisible) || (settings?.menuBarDisplay != .icon && settings?.hideAmounts == false)
             guard needsUpdates, configurationError == nil else { return }
             let delay: TimeInterval?
             if snapshot.phase == .working { delay = 1 }
@@ -172,7 +202,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     }
 
     /// 唤醒、时区或系统时间变化时直接重新估算，不追赶计时器事件。
-    @objc private func environmentChanged(_ notification: Notification) { refresh(); updates.check(manual: false) }
+    @objc private func environmentChanged(_ notification: Notification) {
+        incomeEngine = IncomeEngine()
+        refresh()
+        updates.check(manual: false)
+    }
 
     /// 成功写入后才发布隐私偏好，失败时给出可见错误。
     private func togglePrivacy() {
@@ -210,15 +244,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
 
     /// 复用设置页及未保存草稿；用户打开时显式激活并前置窗口，避免被其他应用遮挡。
     private func showSettings() {
-        popover.performClose(nil)
+        if income != nil { incomePanel.close() }
         if settingsWindow?.window?.isVisible != true {
             settingsWindow = SettingsWindowController(settings: settings ?? WorkSettings(), dataPath: store.fileURL.path, updates: updates,
                                                        onSave: { [weak self] value in
                                                            try self?.save(value)
-                                                           DispatchQueue.main.async { [weak self] in self?.togglePopover() }
+                                                           DispatchQueue.main.async { [weak self] in self?.toggleIncomePanel() }
                                                        },
                                                        onReset: { [weak self] in try self?.reset() })
-            settingsWindow?.onClose = { [weak self] in self?.updates.onChange = nil; self?.settingsWindow = nil }
+            settingsWindow?.onClose = { [weak self] in
+                self?.updates.onChange = nil
+                self?.settingsWindow = nil
+                self?.reclaimClosedViews()
+            }
         }
         settingsWindow?.showWindow(nil)
         // 设置入口需要主动取得焦点；普通 activate() 的协作请求可能被当前前台应用拒绝。
@@ -231,9 +269,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     /// 提供标准的设置、查看与退出快捷键，使原生操作可通过键盘完成。
     private func configureMainMenu() {
         let menu = NSMenu()
-        let root = NSMenuItem(title: "牛马上班", action: nil, keyEquivalent: "")
-        let commands = NSMenu(title: "牛马上班")
-        let show = NSMenuItem(title: "查看当前收入", action: #selector(togglePopover), keyEquivalent: "i")
+        let root = NSMenuItem(title: AppBuildChannel.current.displayName, action: nil, keyEquivalent: "")
+        let commands = NSMenu(title: AppBuildChannel.current.displayName)
+        let show = NSMenuItem(title: "查看当前收入", action: #selector(toggleIncomePanel), keyEquivalent: "i")
         show.target = self
         commands.addItem(show)
         let settings = NSMenuItem(title: "设置…", action: #selector(openSettingsFromMenu), keyEquivalent: ",")

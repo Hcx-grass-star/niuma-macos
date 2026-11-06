@@ -34,7 +34,15 @@ PY
 )"
 /usr/bin/ditto "$sparkle_framework" "$app_dir/Contents/Frameworks/Sparkle.framework"
 if [ "${NIUMA_DISTRIBUTION:-0}" = "1" ]; then
+    /usr/libexec/PlistBuddy -c "Set :NiumaBuildChannel production" "$app_dir/Contents/Info.plist"
+    /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.hcxgrassstar.niuma" "$app_dir/Contents/Info.plist"
+    /usr/libexec/PlistBuddy -c "Set :CFBundleName 牛马上班" "$app_dir/Contents/Info.plist"
+    /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName 牛马上班" "$app_dir/Contents/Info.plist"
     /usr/libexec/PlistBuddy -c "Set :NiumaInstallOnLaunch true" "$app_dir/Contents/Info.plist"
+else
+    /usr/libexec/PlistBuddy -c "Set :NiumaBuildChannel development" "$app_dir/Contents/Info.plist"
+    /usr/libexec/PlistBuddy -c "Set :CFBundleName 牛马上班（开发版）" "$app_dir/Contents/Info.plist"
+    /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName 牛马上班（开发版）" "$app_dir/Contents/Info.plist"
 fi
 source_hash="$(python3 - "$project_root" <<'PY'
 from pathlib import Path
@@ -59,6 +67,7 @@ for item in "$sparkle_dir/XPCServices/Installer.xpc" "$sparkle_dir/XPCServices/D
 done
 codesign --force --sign "$signing_identity" "$app_dir/Contents/Frameworks/Sparkle.framework"
 codesign --force --sign "$signing_identity" --identifier com.hcxgrassstar.niuma.installer "$app_dir/Contents/Helpers/NiumaInstaller"
-codesign --force --sign "$signing_identity" --identifier com.hcxgrassstar.niuma "$app_dir"
+bundle_identifier="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$app_dir/Contents/Info.plist")"
+codesign --force --sign "$signing_identity" --identifier "$bundle_identifier" "$app_dir"
 codesign --verify --deep --strict "$app_dir"
 printf '已构建：%s（%s）\n' "$app_dir" "$(lipo -archs "$app_dir/Contents/MacOS/Niuma")"

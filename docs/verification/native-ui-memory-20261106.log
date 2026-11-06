@@ -1,0 +1,22 @@
+Building for production...
+[2 / 10]
+[3 / 11] NiumaCore
+[4 / 12] NiumaCore
+/Users/huacaoxing/.codex/worktrees/memory-under-30mb/niuma-macos/Package.swift: NiumaCore: ld: warning: search path '/Library/Developer/CommandLineTools/Developer/Library/Frameworks' not found
+[10 / 15] NiumaInstallation
+[11 / 16] NiumaInstallation
+/Users/huacaoxing/.codex/worktrees/memory-under-30mb/niuma-macos/Package.swift: NiumaInstallation: ld: warning: search path '/Library/Developer/CommandLineTools/Developer/Library/Frameworks' not found
+[17 / 19] Niuma-product
+[18 / 20] Niuma-product
+/Users/huacaoxing/.codex/worktrees/memory-under-30mb/niuma-macos/Package.swift: Niuma-product: ld: warning: search path '/Library/Developer/CommandLineTools/Developer/usr/lib' not found
+/Users/huacaoxing/.codex/worktrees/memory-under-30mb/niuma-macos/Package.swift: Niuma-product: ld: warning: search path '/Library/Developer/CommandLineTools/Developer/Library/Frameworks' not found
+[20 / 20] Niuma-product
+Build complete! (4.34秒)
+PID: 51551
+sandbox_extension_issue_file_to_process failed for /var/folders/33/dhlmtmrx3_gfs18qtv9drgsh0000gn/T//niuma-ui-check.bsSKCn/MemoryProbe.app: 1 (Operation not permitted)
+idle: 19.55 MB; lifetime peak 21.60 MB
+panel: 25.63 MB; lifetime peak 27.62 MB
+after-close: 25.66 MB; lifetime peak 27.62 MB
+settings: 45.66 MB; lifetime peak 46.02 MB
+after-settings: 42.93 MB; lifetime peak 46.02 MB
+PASS: 原生菜单、面板再次打开、Esc、失焦收起、控制器释放、设置取消及人民币格式

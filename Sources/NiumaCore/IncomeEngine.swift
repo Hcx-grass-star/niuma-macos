@@ -28,6 +28,39 @@ public struct IncomeEngine: Sendable {
     /// 计算班次归属与月份的日历，测试时固定时区。
     public let calendar: Calendar
 
+    /// 单个引擎最多保留 32 个排班计数，不保留工资或收入历史。
+    private let scheduleCounts = ScheduleCounts()
+
+    /// 日历固定于引擎，计数只依赖起点、天数和排班；锁保护并发调用。
+    private final class ScheduleCounts: @unchecked Sendable {
+        /// 工资和作息时刻不影响排班日期数量，不纳入缓存键。
+        struct Key: Hashable {
+            /// 统计区间的首日。
+            let start: Date
+            /// 区间包含的日数。
+            let count: Int
+            /// 每周开始班次的日期集合。
+            let weekdays: Set<Int>
+            /// 是否应用全国安排覆盖。
+            let chinaHolidayEnabled: Bool
+        }
+        /// 同一实例可能被不同任务读取，统一保护计数和容量淘汰。
+        private let lock = NSLock()
+        /// 有上限的小型计数索引，避免按秒创建整年的日期对象。
+        private var values: [Key: Int] = [:]
+
+        /// 缓存命中直接返回；填满后整体清空，控制长期运行的驻留大小。
+        func count(for key: Key, calculate: () -> Int) -> Int {
+            lock.lock()
+            defer { lock.unlock() }
+            if let value = values[key] { return value }
+            let value = calculate()
+            if values.count >= 32 { values.removeAll(keepingCapacity: true) }
+            values[key] = value
+            return value
+        }
+    }
+
     /// 使用明确的日历解释用户输入的本地作息。
     public init(calendar: Calendar = .autoupdatingCurrent) { self.calendar = calendar }
 
@@ -136,14 +169,24 @@ public struct IncomeEngine: Sendable {
         return scheduledDays(from: month.start, count: count, settings: settings)
     }
 
-    /// 按日期统计月份中的有效班次，使全国安排覆盖和缺失年份回退保持一致。
+    /// 每周排班按完整周计数；只有存在全国覆盖数据时才逐日检查，减少刷新时的日期分配。
     private func scheduledDays(from start: Date, count: Int, settings: WorkSettings) -> Int {
-        var total = 0
-        for offset in 0..<count {
-            let day = calendar.date(byAdding: .day, value: offset, to: start)!
-            if isScheduledDate(on: day, settings: settings) { total += 1 }
+        let key = ScheduleCounts.Key(start: start, count: count, weekdays: settings.weekdays,
+                                     chinaHolidayEnabled: settings.chinaHolidayEnabled)
+        return scheduleCounts.count(for: key) {
+            if !settings.chinaHolidayEnabled || !ChinaHolidayCalendar.hasData(for: calendar.component(.year, from: start)) {
+                let weekday = calendar.component(.weekday, from: start)
+                return (0..<(count % 7)).reduce(count / 7 * settings.weekdays.count) { total, offset in
+                    total + (settings.weekdays.contains((weekday - 1 + offset) % 7 + 1) ? 1 : 0)
+                }
+            }
+            var total = 0
+            for offset in 0..<count {
+                let day = calendar.date(byAdding: .day, value: offset, to: start)!
+                if isScheduledDate(on: day, settings: settings) { total += 1 }
+            }
+            return total
         }
-        return total
     }
 
     /// 班次使用实际经过的时间，防止夏令时按固定秒数偏移。

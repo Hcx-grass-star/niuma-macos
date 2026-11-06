@@ -25,7 +25,9 @@ struct SalaryFlowIntegrationTests {
             ("年度回算边界", suite.testYearToDateBoundaries),
             ("中国节假日及调休", suite.testChinaHolidaySchedule),
             ("本月收入与菜单栏选择", suite.testMonthIncome),
-            ("收入面板显示偏好", suite.testIncomeVisibility)
+            ("收入面板显示偏好", suite.testIncomeVisibility),
+            ("复用引擎后的配置变更", suite.testReusableEngine),
+            ("包环境识别及自启动准入", BuildChannelIntegrationTests.run)
         ]
         var failures = 0
         for (name, run) in cases {
@@ -371,6 +373,42 @@ struct SalaryFlowIntegrationTests {
         for key in ["showCurrentIncome", "showMonthlyIncome", "showYearlyIncome"] { old.removeValue(forKey: key) }
         let loaded = try JSONDecoder().decode(WorkSettings.self, from: JSONSerialization.data(withJSONObject: old))
         try expectTrue(loaded.showCurrentIncome && loaded.showMonthlyIncome && loaded.showYearlyIncome)
+    }
+
+    /// 真实保存、重载后复用同一引擎，工资、排班及月份改变不能沿用错误计数。
+    func testReusableEngine() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("niuma-cache-test-" + UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = SettingsStore(directory: directory)
+        let engine = IncomeEngine(calendar: calendar)
+        var settings = monthly()
+        for (salary, weekdays, expected) in [(21000, Set([2, 3, 4, 5, 6]), "500"),
+                                              (42000, Set([2, 3, 4, 5, 6]), "1000"),
+                                              (21000, Set(1...7), "350")] {
+            settings.salary = Decimal(salary)
+            settings.weekdays = weekdays
+            try store.save(settings)
+            let loaded = try store.load()!
+            for _ in 0..<3 {
+                try expectEqual(amount(try engine.evaluate(loaded, at: date(4, 14))), Decimal(string: expected)!)
+            }
+        }
+        settings = monthly()
+        settings.chinaHolidayEnabled = true
+        try store.save(settings)
+        let loaded = try store.load()!
+        try expectEqual(try engine.evaluate(loaded, at: date(4, 14, month: 1)).phase, .working)
+        settings.chinaHolidayEnabled = false
+        try store.save(settings)
+        try expectEqual(try engine.evaluate(store.load(), at: date(4, 14, month: 1)).phase, .off)
+        // 换月及缓存容量淘汰后，工作日数量仍按该月实际天数计算。
+        settings.weekdays = Set(1...7)
+        for year in 2024...2028 {
+            for month in 1...12 {
+                let now = date(4, 14, month: month, year: year)
+                try expectEqual(engine.workdays(in: now, settings: settings), calendar.range(of: .day, in: .month, for: now)!.count)
+            }
+        }
     }
 
     /// 非上海时区遇到重复或不存在的钟表时间时必须明确拒绝。

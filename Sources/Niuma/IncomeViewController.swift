@@ -4,6 +4,17 @@ import NiumaCore
 /// 展示当前班次、本月和本年预估收入、工作状态和一句鼓励。
 @MainActor
 final class IncomeViewController: NSViewController {
+    /// 主线程复用人民币格式化器，避免每个金额、每秒创建 ICU 格式化状态。
+    private static let moneyFormatter: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.minimumFractionDigits = 2
+        formatter.maximumFractionDigits = 2
+        formatter.roundingMode = .halfUp
+        formatter.locale = Locale(identifier: "zh_CN")
+        return formatter
+    }()
+
     /// 主显示金额，使用等宽数字避免按秒刷新时跳动。
     private let amount = NSTextField(labelWithString: "—")
     /// 当前班次状态。
@@ -38,7 +49,7 @@ final class IncomeViewController: NSViewController {
     /// 创建接近已评审原型的原生弹出面板。
     override func loadView() {
         view = NSView(frame: NSRect(x: 0, y: 0, width: 360, height: 480))
-        let brand = NSTextField(labelWithString: "牛马上班")
+        let brand = NSTextField(labelWithString: AppBuildChannel.current.displayName)
         brand.font = .systemFont(ofSize: 13, weight: .medium)
         let icon = NSImageView(image: NSImage(systemSymbolName: "leaf", accessibilityDescription: nil)!)
         icon.contentTintColor = .systemGreen
@@ -123,12 +134,25 @@ final class IncomeViewController: NSViewController {
         // 读取 view 会按需触发 loadView；loadViewIfNeeded() 需 macOS 14，故不直接调用。
         _ = view
         let hidden = settings?.hideAmounts == true
+        var layoutChanged = preferredContentSize.height == 0
         amount.stringValue = hidden ? "••••" : Self.money(snapshot.amount)
-        amount.font = .monospacedDigitSystemFont(ofSize: amount.stringValue.count > 13 ? 30 : 48, weight: .medium)
+        let amountSize: CGFloat = amount.stringValue.count > 13 ? 30 : 48
+        if amount.font?.pointSize != amountSize {
+            layoutChanged = true
+            amount.font = .monospacedDigitSystemFont(ofSize: amountSize, weight: .medium)
+        }
         monthAmount.stringValue = hidden ? "••••" : Self.money(snapshot.monthToDateAmount)
-        monthAmount.font = .monospacedDigitSystemFont(ofSize: monthAmount.stringValue.count > 13 ? 18 : 22, weight: .medium)
+        let monthAmountSize: CGFloat = monthAmount.stringValue.count > 13 ? 18 : 22
+        if monthAmount.font?.pointSize != monthAmountSize {
+            layoutChanged = true
+            monthAmount.font = .monospacedDigitSystemFont(ofSize: monthAmountSize, weight: .medium)
+        }
         yearAmount.stringValue = hidden ? "••••" : Self.money(snapshot.yearToDateAmount)
-        yearAmount.font = .monospacedDigitSystemFont(ofSize: yearAmount.stringValue.count > 13 ? 18 : 22, weight: .medium)
+        let yearAmountSize: CGFloat = yearAmount.stringValue.count > 13 ? 18 : 22
+        if yearAmount.font?.pointSize != yearAmountSize {
+            layoutChanged = true
+            yearAmount.font = .monospacedDigitSystemFont(ofSize: yearAmountSize, weight: .medium)
+        }
         let labels: [WorkPhase: String] = [
             .unconfigured: "尚未设置", .before: "尚未上班", .working: "上班中",
             .resting: "休息中", .finished: "本班已结束", .off: "休息日"
@@ -139,17 +163,29 @@ final class IncomeViewController: NSViewController {
             status.stringValue += " · " + reason
         }
         status.toolTip = snapshot.scheduleReason
+        let quoteText = error ?? encouragement(for: snapshot)
+        layoutChanged = layoutChanged
+            || currentSection.isHidden != (settings?.showCurrentIncome == false)
+            || monthSection.isHidden != (settings?.showMonthlyIncome == false)
+            || yearSection.isHidden != (settings?.showYearlyIncome == false)
+            || quote.isHidden != (error == nil && settings?.encouragement == false)
+            || quote.stringValue != quoteText
         currentSection.isHidden = settings?.showCurrentIncome == false
         monthSection.isHidden = settings?.showMonthlyIncome == false
         yearSection.isHidden = settings?.showYearlyIncome == false
-        quote.stringValue = error ?? encouragement(for: snapshot)
+        quote.stringValue = quoteText
         quote.isHidden = error == nil && settings?.encouragement == false
-        privacy.toolTip = hidden ? "显示金额" : "隐藏金额"
-        privacy.setAccessibilityLabel(hidden ? "显示金额" : "隐藏金额")
-        privacy.image = NSImage(systemSymbolName: hidden ? "eye.slash" : "eye", accessibilityDescription: privacy.toolTip)
-        let size = NSSize(width: 360, height: max(180, contentStack.fittingSize.height + 34))
-        preferredContentSize = size
-        view.setFrameSize(size)
+        let privacyLabel = hidden ? "显示金额" : "隐藏金额"
+        if privacy.toolTip != privacyLabel {
+            privacy.toolTip = privacyLabel
+            privacy.setAccessibilityLabel(privacyLabel)
+            privacy.image = NSImage(systemSymbolName: hidden ? "eye.slash" : "eye", accessibilityDescription: privacyLabel)
+        }
+        if layoutChanged {
+            let size = NSSize(width: 360, height: max(180, contentStack.fittingSize.height + 34))
+            preferredContentSize = size
+            view.setFrameSize(size)
+        }
     }
 
     /// 将金额和说明组成可整体收起的区域，避免隐藏金额后留下对应标题和空白。
@@ -164,13 +200,7 @@ final class IncomeViewController: NSViewController {
     /// 仅在展示边界舍入人民币金额，不改变内部计算精度。
     static func money(_ value: Decimal?) -> String {
         guard let value else { return "—" }
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        formatter.minimumFractionDigits = 2
-        formatter.maximumFractionDigits = 2
-        formatter.roundingMode = .halfUp
-        formatter.locale = Locale(identifier: "zh_CN")
-        return "¥" + (formatter.string(from: NSDecimalNumber(decimal: value)) ?? "—")
+        return "¥" + (moneyFormatter.string(from: NSDecimalNumber(decimal: value)) ?? "—")
     }
 
     /// 按当前状态和已达到的节点选取一条文案，不补播历史节点。

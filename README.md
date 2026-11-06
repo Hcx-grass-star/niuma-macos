@@ -31,6 +31,12 @@ Windows 桌面宠物：启动后在主屏工作区右下角展示小牛浮窗，
 
 点击浮窗齿轮可自由组合当前、本月、本年预估收入、工作状态及当前时间，也可填写最多 40 字的自定义文字。全部取消且文字留空时只显示小牛，悬停小牛可重新找到齿轮入口。点击“保存”立即生效并保留到下次启动，“取消”放弃本次编辑。显示偏好独立保存在 `niuma.pet.v1`，修改工资作息不会覆盖它；三种收入均遵守原有金额隐藏开关。
 
+## macOS 包环境标识
+
+应用通过 `Info.plist` 的 `NiumaBuildChannel` 区分环境：`production` 为正式版，`development` 为开发版，`test` 为测试版。缺失或无效值按开发版处理。非正式版的应用名称、菜单栏提示、收入面板和设置窗口带环境后缀，设置页显示当前环境；只有正式版允许注册登录自启动。开发版使用独立的应用标识与配置目录，不读取或覆盖正式版工资设置。
+
+`bash scripts/build-app.sh` 默认构建开发版；`NIUMA_DISTRIBUTION=1 bash scripts/build-app.sh` 写入正式版环境、名称和应用标识，现有发布脚本沿用这一方式。`bash scripts/test-native-ui.sh` 生成显式标记为 `test` 的隔离测试包。旧的 `MemoryProbe` 系统登记不会因新配置自动移除。
+
 ## 原生开发版
 
 当前已有 Swift + AppKit 原生工程，自动更新使用锁定的 Sparkle 2.10.1。首次构建先执行 `swift package resolve`，之后使用本地缓存与 `Package.resolved`。已在本机 M5、macOS 27.2、Swift 6.4.2 命令行工具链上构建。

@@ -99,7 +99,7 @@ final class SettingsWindowController: NSWindowController, NSTextFieldDelegate, N
         salary = settings.hideAmounts ? NSSecureTextField() : NSTextField()
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 450, height: 690),
                               styleMask: [.titled, .closable], backing: .buffered, defer: false)
-        window.title = "牛马上班 · 工资与作息"
+        window.title = AppBuildChannel.current.displayName + " · 工资与作息"
         window.isReleasedWhenClosed = false
         super.init(window: window)
         window.delegate = self
@@ -117,6 +117,8 @@ final class SettingsWindowController: NSWindowController, NSTextFieldDelegate, N
         let scroll = NSScrollView(frame: window.contentView!.bounds)
         scroll.autoresizingMask = [.width, .height]
         scroll.hasVerticalScroller = true
+        // 表单使用传统滚动条，减少系统覆盖滚动条的额外显示资源。
+        scroll.scrollerStyle = .legacy
         scroll.drawsBackground = false
         window.contentView = scroll
         let document = FormDocument()
@@ -219,10 +221,12 @@ final class SettingsWindowController: NSWindowController, NSTextFieldDelegate, N
         separator.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
         login.target = self
         login.action = #selector(changeLogin)
+        login.setAccessibilityIdentifier("loginAtStartup")
         loginState.font = .systemFont(ofSize: 11)
         loginState.textColor = .secondaryLabelColor
         stack.addArrangedSubview(login)
         stack.addArrangedSubview(loginState)
+        stack.addArrangedSubview(label("运行环境：" + AppBuildChannel.current.title))
         stack.addArrangedSubview(label("应用更新 · 当前版本 " + updates.currentVersion, size: 13, secondary: false))
         automaticUpdates.target = self
         automaticUpdates.action = #selector(changeAutomaticUpdates)
@@ -407,8 +411,14 @@ final class SettingsWindowController: NSWindowController, NSTextFieldDelegate, N
     /// 放弃工资作息草稿；立即生效的系统登录开关单独说明。
     @objc private func cancel() { close() }
 
-    /// 用实际系统状态展示登录启动，不依赖本地布尔值假定成功。
+    /// 非正式包禁用系统登录项入口；正式包展示系统实际注册状态。
     private func updateLoginState() {
+        guard AppBuildChannel.current.allowsLoginItemRegistration else {
+            login.isEnabled = false
+            login.state = .off
+            loginState.stringValue = "当前为" + AppBuildChannel.current.title + "，不允许注册登录自启动。"
+            return
+        }
         let status = SMAppService.mainApp.status
         login.state = status == .enabled ? .on : .off
         switch status {
@@ -420,8 +430,9 @@ final class SettingsWindowController: NSWindowController, NSTextFieldDelegate, N
         }
     }
 
-    /// 用户明确切换后调用系统服务，失败时恢复实际状态并说明原因。
+    /// 再次校验包环境后调用系统服务，避免非正式包通过动作调用注册自启动。
     @objc private func changeLogin() {
+        guard AppBuildChannel.current.allowsLoginItemRegistration else { updateLoginState(); return }
         do {
             if login.state == .on { try SMAppService.mainApp.register() }
             else { try SMAppService.mainApp.unregister() }
