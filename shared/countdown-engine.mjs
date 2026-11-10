@@ -1,4 +1,11 @@
 import { isScheduledDate } from './holiday-calendar.mjs';
+/** 删除已启用且到期的固定事件；无变化时复用原配置，避免周期写入。 */
+export function removeCompletedCountdowns(preferences, now = new Date()) {
+  const events = preferences.events.filter(event => !(event.enabled && event.type === 'fixed' && event.targetAt <= now.getTime()));
+  if (events.length === preferences.events.length) return preferences;
+  const removedPrimary = preferences.events.some(e => e.id === preferences.menuCountdownID) && !events.some(e => e.id === preferences.menuCountdownID);
+  return { ...preferences, events, menuCountdownID: removedPrimary ? null : preferences.menuCountdownID };
+}
 /** 与 Swift 保持一致的纯时间核心；不创建定时器、不访问存储。 */
 export function validateCountdowns(events) {
   if (!Array.isArray(events) || events.length > 20 || new Set(events.map(e => e.id)).size !== events.length) throw new Error('最多添加 20 条倒计时，且标识不能重复。');
@@ -57,9 +64,10 @@ export function countdownText(snapshot) {
 export function menuCountdownText(snapshot) {
   return `${snapshot.title} ${snapshot.phase === 'pending' && snapshot.remainingSeconds >= 86400 ? `${Math.ceil(snapshot.remainingSeconds / 86400)}天` : countdownText(snapshot)}`;
 }
-/** 只有可见输出参与调度；收入和所有倒计时共享一个任务。 */
+/** 可见输出按需刷新，隐藏固定目标只在到期唤醒；始终复用统一任务。 */
 export function nextRefreshDelay(snapshots, panelVisible, menuID, incomeActive) {
   if (incomeActive) return 1;
   const delays = snapshots.filter(s => s.phase === 'pending' && (panelVisible || s.id === menuID)).map(s => s.remainingSeconds <= 86400 ? 1 : Math.min(60, s.remainingSeconds - 86400));
+  delays.push(...snapshots.filter(s => s.phase === 'pending' && s.type === 'fixed').map(s => s.remainingSeconds));
   return delays.length ? Math.min(...delays) : null;
 }

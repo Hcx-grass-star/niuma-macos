@@ -25,7 +25,7 @@ enum CountdownIntegrationTests {
         let results = try engine.evaluate(loaded.events, work: work, at: now)
         try expectEqual(results[0].remainingSeconds, 3600)
         try expectEqual(results[0].menuText, "下班 01:00:00")
-        try expectNil(engine.refreshDelay(results, panelVisible: false, menuID: nil, incomeActive: false))
+        try expectEqual(engine.refreshDelay(results, panelVisible: false, menuID: nil, incomeActive: false), 180000)
         try expectEqual(engine.refreshDelay(results, panelVisible: false, menuID: preferences.events[0].id, incomeActive: false), 60)
         let mondayEnd = calendar.date(from: DateComponents(year: 2026, month: 11, day: 9, hour: 18))!
         let next = try engine.evaluate([preferences.events[1]], work: work, at: now.addingTimeInterval(3600))
@@ -37,6 +37,21 @@ enum CountdownIntegrationTests {
         let arrived = try engine.evaluate([preferences.events[0]], work: nil, at: now.addingTimeInterval(180000))
         try expectEqual(arrived[0].phase, .arrived)
         try expectNil(engine.refreshDelay(arrived, panelVisible: true, menuID: nil, incomeActive: false))
+        // 真实文件重载证明到期删除、主事件回退与关闭项保护，不修改用户目录。
+        var expiring = loaded
+        let deadline = now.addingTimeInterval(180000)
+        let disabled = CountdownEvent(title: "暂时关闭", targetAt: now, enabled: false)
+        expiring.events.append(disabled)
+        try expectEqual(expiring.removingCompleted(at: deadline.addingTimeInterval(-0.001)), expiring)
+        let cleaned = expiring.removingCompleted(at: deadline)
+        try expectEqual(cleaned.events, [loaded.events[1], disabled])
+        try expectNil(cleaned.menuCountdownID)
+        try expectEqual(cleaned.menuMode, expiring.menuMode)
+        try expectEqual(cleaned.menuWidth, expiring.menuWidth)
+        try store.save(cleaned)
+        try expectEqual(try store.load(), cleaned)
+        try expectEqual(cleaned.removingCompleted(at: deadline.addingTimeInterval(86400)), cleaned)
+        try store.save(loaded)
         preferences.events[0].title = " "
         try expectThrows { try store.save(preferences) }
         try expectEqual(try store.load(), loaded)

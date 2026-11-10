@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { nextIncomeBoundary } from './income-engine.mjs';
-import { evaluateCountdowns, validateCountdowns, nextRefreshDelay, menuCountdownText } from './countdown-engine.mjs';
+import { evaluateCountdowns, validateCountdowns, nextRefreshDelay, menuCountdownText, removeCompletedCountdowns } from './countdown-engine.mjs';
 
 /** 经过 JSON 保存重载，验证倒计时配置与计算的完整链路。 */
 function restored(events) { return JSON.parse(JSON.stringify(events)); }
@@ -15,7 +15,7 @@ assert.equal(snapshots[0].id, 'b');
 assert.equal(snapshots[0].remainingSeconds, 3600);
 assert.equal(menuCountdownText(snapshots[0]), '下班 01:00:00');
 assert.equal(nextRefreshDelay(snapshots, true, 'a', false), 1);
-assert.equal(nextRefreshDelay(snapshots, false, null, false), null);
+assert.equal(nextRefreshDelay(snapshots, false, null, false), (events[0].targetAt - now.getTime()) / 1000);
 assert.equal(nextRefreshDelay(snapshots, false, 'a', false), 60);
 assert.equal(evaluateCountdowns(events, schedule, new Date(2026, 10, 6, 18))[0].targetAt, new Date(2026, 10, 8, 18).getTime());
 assert.equal(evaluateCountdowns(events.filter(e => e.id === 'b'), schedule, new Date(2026, 10, 7, 12))[0].targetAt, new Date(2026, 10, 9, 18).getTime());
@@ -53,3 +53,16 @@ const holidayNow = new Date(2026, 0, 1, 10);
 const holidayEnd = evaluateCountdowns([events[1]], { ...schedule, chinaHolidayEnabled:true }, holidayNow)[0];
 assert.equal(holidayEnd.targetAt, new Date(2026,0,4,18).getTime());
 console.log('PASS: 下班倒计时跳过元旦长假并识别周日补班');
+
+// 到期按目标毫秒判定；关闭项和循环下班不被删除，重载后也不恢复完成项。
+const saved = { events: [...events, { ...events[0], id: 'disabled', enabled: false }], menuCountdownID: 'a', menuMode: 'both', menuWidth: 120 };
+assert.equal(removeCompletedCountdowns(saved, new Date(events[0].targetAt - 1)), saved);
+const cleaned = removeCompletedCountdowns(saved, new Date(events[0].targetAt));
+assert.deepEqual(cleaned.events.map(e => e.id), ['b', 'disabled']);
+assert.equal(cleaned.menuCountdownID, null);
+assert.equal(cleaned.menuMode, 'both');
+assert.equal(cleaned.menuWidth, 120);
+const reloaded = restored(cleaned);
+assert.equal(removeCompletedCountdowns(reloaded, new Date(events[0].targetAt + 86400000)), reloaded);
+assert.equal(evaluateCountdowns(reloaded.events, schedule, new Date(events[0].targetAt))[0].id, 'b');
+console.log('PASS: 到期删除、JSON重载、主事件回退、循环下班和关闭项保护');

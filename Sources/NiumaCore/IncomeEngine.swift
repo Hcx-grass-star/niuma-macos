@@ -19,6 +19,8 @@ public struct IncomeSnapshot: Sendable {
     public let progress: Double
     /// 下一次需要改变状态的时间，供停止秒级刷新时使用。
     public let nextBoundary: Date?
+    /// 下一次边界的类型，供提醒调度使用；月末等计算边界没有类型。
+    public let nextBoundaryKind: WorkBoundaryKind?
     /// 当前班次或当天采用的排班依据，不包含工资信息。
     public let scheduleReason: String?
 }
@@ -67,7 +69,7 @@ public struct IncomeEngine: Sendable {
     /// 根据当前时刻生成收入快照，不保存计时器进度。
     public func evaluate(_ settings: WorkSettings?, at now: Date) throws -> IncomeSnapshot {
         guard let settings else {
-            return IncomeSnapshot(phase: .unconfigured, amount: nil, yearToDateAmount: nil, monthToDateAmount: nil, progress: 0, nextBoundary: nil, scheduleReason: nil)
+            return IncomeSnapshot(phase: .unconfigured, amount: nil, yearToDateAmount: nil, monthToDateAmount: nil, progress: 0, nextBoundary: nil, nextBoundaryKind: nil, scheduleReason: nil)
         }
         try settings.validate()
         let yearToDate = try accruedAmount(for: settings, from: calendar.dateInterval(of: .year, for: now)!.start, through: now)
@@ -78,8 +80,15 @@ public struct IncomeEngine: Sendable {
         let current = try shift(on: today, settings: settings)
         let active = previous.flatMap { now >= $0.start && now < $0.end ? $0 : nil } ?? current
         // 年度金额需要在元旦零点刷新，即使下一班尚未开始。
-        var boundaries: [Date] = [calendar.dateInterval(of: .month, for: now)!.end]
-        if let active { boundaries += [active.start, active.end] + active.rests.flatMap { [$0.start, $0.end] } }
+        var boundaries: [(date: Date, kind: WorkBoundaryKind?)] = [(calendar.dateInterval(of: .month, for: now)!.end, nil)]
+        if let active {
+            boundaries.append((active.start, .shiftStart))
+            boundaries.append((active.end, .shiftEnd))
+            for rest in active.rests {
+                boundaries.append((rest.start, .restStart))
+                boundaries.append((rest.end, .restEnd))
+            }
+        }
         var nextDay = today
         let monthEnd = calendar.dateInterval(of: .month, for: now)!.end
         while nextDay < monthEnd {
@@ -87,12 +96,13 @@ public struct IncomeEngine: Sendable {
             nextDay = calendar.date(byAdding: .day, value: 1, to: day)!
             if isScheduledDate(on: day, settings: settings) {
                 let start = try localDate(on: day, minute: settings.startMinute)
-                if start > now { boundaries.append(start); break }
+                if start > now { boundaries.append((start, .shiftStart)); break }
             }
         }
-        let next = boundaries.filter { $0 > now }.min()
+        let next = boundaries.filter { $0.date > now }.min { $0.date < $1.date }
         guard let active else {
-            return IncomeSnapshot(phase: .off, amount: nil, yearToDateAmount: yearToDate, monthToDateAmount: monthToDate, progress: 0, nextBoundary: next,
+            return IncomeSnapshot(phase: .off, amount: nil, yearToDateAmount: yearToDate, monthToDateAmount: monthToDate, progress: 0,
+                                  nextBoundary: next?.date, nextBoundaryKind: next?.kind,
                                   scheduleReason: ChinaHolidayCalendar.reason(on: today, settings: settings, calendar: calendar))
         }
         let phase: WorkPhase
@@ -111,7 +121,7 @@ public struct IncomeEngine: Sendable {
         let fraction = Decimal(elapsed) / Decimal(duration)
         let scheduleDate = calendar.startOfDay(for: active.start)
         return IncomeSnapshot(phase: phase, amount: daily * fraction, yearToDateAmount: yearToDate, monthToDateAmount: monthToDate,
-                              progress: elapsed / duration, nextBoundary: next,
+                              progress: elapsed / duration, nextBoundary: next?.date, nextBoundaryKind: next?.kind,
                               scheduleReason: ChinaHolidayCalendar.reason(on: scheduleDate, settings: settings, calendar: calendar))
     }
 

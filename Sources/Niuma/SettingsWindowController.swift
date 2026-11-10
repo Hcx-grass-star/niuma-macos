@@ -65,6 +65,8 @@ final class SettingsWindowController: NSWindowController, NSTextFieldDelegate, N
     private var restRows: [RestRow] = []
     /// 是否展示鼓励内容。
     private let cheer = NSButton(checkboxWithTitle: "显示鼓励文案", target: nil, action: nil)
+    /// 是否在应用运行期间发送工作节点提醒。
+    private let workReminders = NSButton(checkboxWithTitle: "提醒上班、休息和下班", target: nil, action: nil)
     /// 面板内三个独立显示开关，保存前只修改草稿。
     private let currentIncomeVisible = NSButton(checkboxWithTitle: "当前已赚", target: nil, action: nil)
     /// 是否在面板中显示本月累计金额。
@@ -212,6 +214,7 @@ final class SettingsWindowController: NSWindowController, NSTextFieldDelegate, N
         monthlyOptions.addArrangedSubview(fixedRow)
         stack.addArrangedSubview(monthlyOptions)
         cheer.state = original.encouragement ? .on : .off
+        workReminders.state = original.workReminders ? .on : .off
         menuIncome.addItems(withTitles: MenuBarDisplay.allCases.map { $0.title })
         menuIncome.selectItem(at: MenuBarDisplay.allCases.firstIndex(of: original.menuBarDisplay) ?? 0)
         stack.addArrangedSubview(label("收入面板显示", secondary: false))
@@ -225,6 +228,8 @@ final class SettingsWindowController: NSWindowController, NSTextFieldDelegate, N
         stack.addArrangedSubview(monthlyIncomeVisible)
         stack.addArrangedSubview(yearlyIncomeVisible)
         stack.addArrangedSubview(cheer)
+        stack.addArrangedSubview(workReminders)
+        stack.addArrangedSubview(label("首次开启会请求系统通知权限；应用运行期间按当天排班提醒，不包含工资金额。"))
         stack.addArrangedSubview(NSButton(title: "倒计时与菜单栏…", target: self, action: #selector(openCountdowns)))
         stack.addArrangedSubview(horizontal([label("菜单栏显示", secondary: false), menuIncome]))
         stack.addArrangedSubview(label("面板外观", secondary: false))
@@ -394,6 +399,7 @@ final class SettingsWindowController: NSWindowController, NSTextFieldDelegate, N
         settings.showMonthlyIncome = monthlyIncomeVisible.state == .on
         settings.showYearlyIncome = yearlyIncomeVisible.state == .on
         settings.encouragement = cheer.state == .on
+        settings.workReminders = workReminders.state == .on
         settings.menuBarDisplay = MenuBarDisplay.allCases[menuIncome.indexOfSelectedItem]
         settings.menuBarIncome = settings.menuBarDisplay != .icon
         settings.chinaHolidayEnabled = chinaHoliday.state == .on

@@ -1,4 +1,4 @@
-import { evaluateCountdowns, countdownText, menuCountdownText, validateCountdowns, nextRefreshDelay } from './countdown-engine.mjs';
+import { evaluateCountdowns, countdownText, menuCountdownText, validateCountdowns, nextRefreshDelay, removeCompletedCountdowns } from './countdown-engine.mjs';
 
 /** 倒计时与工资分开保存，旧工资配置无需迁移。 */
 const key = 'niuma.countdowns.v1';
@@ -8,6 +8,8 @@ const defaults = { events: [], menuMode: null, menuCountdownID: null, menuWidth:
 let preferences = { ...defaults };
 /** 加载错误始终可见，保存前不覆盖原始数据。 */
 let loadError = '';
+/** 自动删除失败单独报告，不掩盖启动配置读取错误。 */
+let cleanupError = '';
 try {
   preferences = { ...defaults, ...JSON.parse(localStorage.getItem(key) ?? 'null') };
   validatePreferences(preferences);
@@ -31,8 +33,17 @@ function validatePreferences(value) {
 }
 /** 只在文本改变时更新节点，避免相同 DOM 每秒重复布局。 */
 function text(node, value) { if (node.textContent !== value) node.textContent = value; }
-/** 更新全部可见摘要；管理入口可查看超过三条的事件。 */
+/** 先持久化到期删除再更新摘要；失败保留旧配置并显示原因。 */
 export function countdownState(settings, now, visible) {
+  const cleaned = removeCompletedCountdowns(preferences, now);
+  if (cleaned !== preferences) {
+    try {
+      localStorage.setItem(key, JSON.stringify(cleaned));
+      preferences = cleaned;
+      cleanupError = '';
+    } catch { cleanupError = '已完成倒计时删除失败，请检查存储后重试。'; }
+    if (!$('countdown-settings').hidden && cleanupError) text($('countdown-error'), cleanupError);
+  }
   const snapshots = evaluateCountdowns(preferences.events, settings?.salary == null ? null : settings, now);
   const primary = snapshots.find(s => s.id === preferences.menuCountdownID) ?? snapshots[0];
   const mode = preferences.menuMode ?? ((settings?.trayContent ?? (settings?.trayIncome ? 'current' : 'icon')) !== 'icon' ? 'income' : 'icon');
@@ -40,8 +51,8 @@ export function countdownState(settings, now, visible) {
   const menuIncome = mode === 'income' || mode === 'both';
   if (visible) {
     const summary = snapshots.slice(0, 3).map(s => `${s.title}：${countdownText(s)}`).join('\n');
-    text($('countdown-summary'), loadError || summary);
-    $('countdown-summary').hidden = !summary && !loadError;
+    text($('countdown-summary'), loadError || cleanupError || summary);
+    $('countdown-summary').hidden = !summary && !loadError && !cleanupError;
   }
   return { snapshots, primary, menuCountdown, menuIncome, width: preferences.menuWidth, delay: nextRefreshDelay(snapshots, visible, menuCountdown ? primary?.id : null, false) };
 }
@@ -107,6 +118,7 @@ function updatePrimaryLabels() {
 }
 /** 打开独立草稿，固定倒计时不经过工资必填验证。 */
 function open(settings) {
+  countdownState(settings(), new Date(), false);
   returnToSettings = !$('settings').hidden;
   draft = preferences.events.map(event => ({ ...event }));
   $('menu-mode').value = preferences.menuMode ?? ((settings()?.trayContent ?? (settings()?.trayIncome ? 'current' : 'icon')) !== 'icon' ? 'income' : 'icon');
@@ -114,7 +126,7 @@ function open(settings) {
   $('menu-width-mode').value = width == null ? 'auto' : [80, 120, 180].includes(width) ? String(width) : 'custom';
   $('menu-width-custom').value = String(width ?? 120);
   $('menu-width-custom').hidden = $('menu-width-mode').value !== 'custom';
-  $('countdown-error').textContent = loadError;
+  $('countdown-error').textContent = loadError || cleanupError;
   $('home').hidden = true; $('settings').hidden = true; $('countdown-settings').hidden = false;
   $('countdown-primary').replaceChildren();
   renderRows(); changed();
@@ -140,7 +152,11 @@ export function initCountdowns(onChange, settings) {
     event.preventDefault();
     const value = $('menu-width-mode').value;
     const next = { events: draft.map(e => ({ ...e, title: e.title.trim() })), menuMode: $('menu-mode').value, menuCountdownID: $('countdown-primary').value || null, menuWidth: value === 'auto' ? null : Number(value === 'custom' ? $('menu-width-custom').value : value) };
-    try { validatePreferences(next); localStorage.setItem(key, JSON.stringify(next)); preferences = next; loadError = ''; back(); }
+    try {
+      validatePreferences(next);
+      const cleaned = removeCompletedCountdowns(next);
+      localStorage.setItem(key, JSON.stringify(cleaned)); preferences = cleaned; loadError = ''; cleanupError = ''; back();
+    }
     catch (error) { $('countdown-error').textContent = error.message; }
   });
 }

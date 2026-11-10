@@ -41,6 +41,13 @@ final class IncomeViewController: NSViewController {
         formatter.locale = Locale(identifier: "zh_CN")
         return formatter
     }()
+    /// 用于把下一次工作边界显示成用户熟悉的本地时间。
+    private static let clockFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "zh_CN")
+        formatter.dateFormat = "HH:mm"
+        return formatter
+    }()
     /// 当前收入显示块，继续尊重用户的显示开关。
     private let currentSection = NSStackView()
     /// 月度汇总金额，保留正式版既有指标。
@@ -206,11 +213,7 @@ final class IncomeViewController: NSViewController {
         monthAmount.stringValue = hidden ? "••••" : Self.money(snapshot.monthToDateAmount)
         yearAmount.stringValue = hidden ? "••••" : Self.money(snapshot.yearToDateAmount)
         yearAmount.font = .monospacedDigitSystemFont(ofSize: yearAmount.stringValue.count > 17 ? 16 : 20, weight: .medium)
-        let labels: [WorkPhase: String] = [
-            .unconfigured: "尚未设置", .before: "尚未上班", .working: "上班中",
-            .resting: "休息中", .finished: "本班已结束", .off: "休息日"
-        ]
-        status.stringValue = "● " + (error == nil ? labels[snapshot.phase]! : "检查设置")
+        status.stringValue = "● " + (error == nil ? statusText(for: snapshot) : "检查设置")
         status.textColor = error != nil ? .systemRed : snapshot.phase == .working ? .systemGreen : .secondaryLabelColor
         quote.stringValue = error ?? encouragement(for: snapshot)
         quote.isHidden = error == nil && settings?.encouragement == false
@@ -315,20 +318,53 @@ final class IncomeViewController: NSViewController {
         return "¥" + (moneyFormatter.string(from: NSDecimalNumber(decimal: value)) ?? "—")
     }
 
-    /// 按现有工作状态选择鼓励内容，不增加额外推送或节点任务。
+    /// 按现有工作状态选择鼓励内容，并说明下一次会发生什么。
     private func encouragement(for snapshot: IncomeSnapshot) -> String {
         switch snapshot.phase {
         case .unconfigured: return "设置一下，看看时间值多少钱。"
-        case .before: return "慢慢来，今天也会有收获。"
-        case .resting: return "休息一下，生活也需要留白。"
-        case .finished: return "今天的努力，已经攒起来了。"
-        case .off: return "好好生活，也是一件正经事。"
+        case .before: return "还有 " + remainingText(to: snapshot.nextBoundary) + " 开始今天的班。"
+        case .resting: return "休息一下，" + clockText(snapshot.nextBoundary) + " 继续计薪。"
+        case .finished: return "今天的班结束了，辛苦了。"
+        case .off:
+            if let reason = snapshot.scheduleReason { return "今天是" + reason + "，好好休息。" }
+            return "今天休息，好好生活。"
         case .working:
             if snapshot.progress >= 0.75 { return "今天的努力，正在慢慢兑现。" }
             if snapshot.progress >= 0.5 { return "每一秒，都在为生活攒一点底气。" }
             if snapshot.progress >= 0.25 { return "已经攒下了一点小小的底气。" }
             return "新的一班，慢慢攒下生活的底气。"
         }
+    }
+
+    /// 根据状态生成顶部短标签，让用户无需打开设置理解当前状态。
+    private func statusText(for snapshot: IncomeSnapshot) -> String {
+        switch snapshot.phase {
+        case .unconfigured: return "尚未设置"
+        case .before: return "未开始"
+        case .working: return "上班中"
+        case .resting: return "休息中"
+        case .finished: return "已下班"
+        case .off: return "休息日"
+        }
+    }
+
+    /// 将未来边界转换成紧凑的小时和分钟文案。
+    private func remainingText(to date: Date?) -> String {
+        guard let date else { return "稍后" }
+        let seconds = max(0, Int(date.timeIntervalSinceNow.rounded()))
+        if seconds < 60 { return "不到 1 分钟" }
+        let minutes = seconds / 60
+        let hours = minutes / 60
+        let remainder = minutes % 60
+        if hours > 0 && remainder > 0 { return "\(hours) 小时 \(remainder) 分钟" }
+        if hours > 0 { return "\(hours) 小时" }
+        return "\(remainder) 分钟"
+    }
+
+    /// 将边界时间显示为本地时钟时间；缺失时给出可理解的退化文案。
+    private func clockText(_ date: Date?) -> String {
+        guard let date else { return "稍后" }
+        return Self.clockFormatter.string(from: date)
     }
 
     /// 工资和作息设置由应用管理生命周期。

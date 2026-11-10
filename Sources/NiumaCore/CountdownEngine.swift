@@ -33,6 +33,14 @@ public struct CountdownPreferences: Codable, Equatable, Sendable {
     public var menuWidth: Double?
     /// 初始保留旧菜单行为，不创建虚构倒计时。
     public init() {}
+    /// 删除已启用且到期的固定事件；关闭项和循环排班保留，主事件回到自动选择。
+    public func removingCompleted(at now: Date) -> CountdownPreferences {
+        var next = self
+        next.events.removeAll { $0.enabled && $0.type == .fixed && ($0.targetAt.map { $0 <= now } ?? false) }
+        if let selected = menuCountdownID, events.contains(where: { $0.id == selected }),
+           !next.events.contains(where: { $0.id == selected }) { next.menuCountdownID = nil }
+        return next
+    }
     /// 校验事件、唯一标识与布局范围，保存失败不覆盖旧配置。
     public func validate() throws {
         guard events.count <= 20, Set(events.map(\.id)).count == events.count else { throw CountdownError.invalid("最多添加 20 条倒计时，且标识不能重复。") }
@@ -102,11 +110,12 @@ public struct CountdownEngine: Sendable {
             return CountdownSnapshot(event: event, phase: target == nil ? .unavailable : (remaining > 0 ? .pending : .arrived), targetAt: target, unavailableReason: event.type == .nextWorkEnd ? scheduleError : nil, remainingSeconds: remaining)
         }.sorted { ($0.phase == .pending ? 0 : 1, $0.targetAt ?? .distantFuture, $0.event.id) < ($1.phase == .pending ? 0 : 1, $1.targetAt ?? .distantFuture, $1.event.id) }
     }
-    /// 最多安排一个任务，只有可见且变化的输出参与调度。
+    /// 可见输出按原频率刷新，隐藏的固定目标只在到期时唤醒同一个任务执行删除。
     public func refreshDelay(_ snapshots: [CountdownSnapshot], panelVisible: Bool, menuID: String?, incomeActive: Bool) -> TimeInterval? {
         if incomeActive { return 1 }
         let visible = snapshots.filter { $0.phase == .pending && (panelVisible || $0.event.id == menuID) }
-        return visible.map { $0.remainingSeconds <= 86400 ? 1.0 : min(60, Double($0.remainingSeconds - 86400)) }.min()
+        let expiry = snapshots.filter { $0.phase == .pending && $0.event.type == .fixed }.map { Double($0.remainingSeconds) }
+        return (visible.map { $0.remainingSeconds <= 86400 ? 1.0 : min(60, Double($0.remainingSeconds - 86400)) } + expiry).min()
     }
     /// 从昨日到未来一年枚举有界班次，支持长假覆盖，包含尚未开始和跨夜班次。
     private func nextWorkEnd(_ work: WorkSettings?, at now: Date) throws -> Date? {

@@ -94,7 +94,8 @@ function render() {
     const incomeDelay = snapshot.phase === 'working' ? 1 : Math.max(0.1, (nextIncomeBoundary(settings, now) - now.getTime()) / 1000);
     delay = delay == null ? incomeDelay : Math.min(delay, incomeDelay);
   }
-  if (delay != null) refreshTimer = setTimeout(render, delay * 1000);
+  // 浏览器计时器最多接受 32 位毫秒；长目标分段等待，避免溢出后变成密集刷新。
+  if (delay != null) refreshTimer = setTimeout(render, Math.min(delay * 1000, 2147483647));
 }
 /** 保存成功后才切换两个金额的显示状态，避免重启后意外暴露收入。 */
 function togglePrivacy() {

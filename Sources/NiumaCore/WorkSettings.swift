@@ -58,6 +58,8 @@ public struct WorkSettings: Codable, Equatable, Sendable {
     public var fixedDays: Decimal?
     /// 是否在收入面板显示鼓励文案。
     public var encouragement = true
+    /// 是否在应用运行期间提醒上班、休息和下班节点。
+    public var workReminders = false
     /// 兼容旧版的菜单栏金额开关，新版按 menuBarDisplay 选择内容。
     public var menuBarIncome = false
     /// 菜单栏展示指标，默认仅图标，旧版开关在解码时迁移。
@@ -90,6 +92,7 @@ public struct WorkSettings: Codable, Equatable, Sendable {
         divisorMode = try container.decodeIfPresent(DivisorMode.self, forKey: .divisorMode) ?? .schedule
         fixedDays = try container.decodeIfPresent(Decimal.self, forKey: .fixedDays)
         encouragement = try container.decodeIfPresent(Bool.self, forKey: .encouragement) ?? true
+        workReminders = try container.decodeIfPresent(Bool.self, forKey: .workReminders) ?? false
         menuBarIncome = try container.decodeIfPresent(Bool.self, forKey: .menuBarIncome) ?? false
         menuBarDisplay = try container.decodeIfPresent(MenuBarDisplay.self, forKey: .menuBarDisplay) ?? (menuBarIncome ? .current : .icon)
         showCurrentIncome = try container.decodeIfPresent(Bool.self, forKey: .showCurrentIncome) ?? true

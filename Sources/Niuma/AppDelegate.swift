@@ -2,11 +2,12 @@ import AppKit
 import Darwin
 import NiumaInstallation
 import ServiceManagement
+import UserNotifications
 import NiumaCore
 
 /// 管理唯一菜单栏入口、面板、配置和按需刷新的应用生命周期。
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, UNUserNotificationCenterDelegate {
     /// 同一环境跨更新保持身份稳定，不同环境隔离配置目录及单实例判断。
     static let identifier = AppBuildChannel.current.bundleIdentifier
     /// 实际配置存储，不包含收入历史或按秒日志。
@@ -43,6 +44,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var configurationError: String?
     /// 独立于工资计算的公开版本检查和检查偏好。
     private let updates: UpdateController
+    /// 依据收入边界发送不含金额的工作节点提醒。
+    private let reminders = WorkReminderCoordinator()
     /// 上一次写入菜单栏的标题，避免相同内容触发重绘。
     private var lastStatusTitle: String?
     /// 上一次写入菜单栏的提示文本，避免相同内容重复更新。
@@ -62,6 +65,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     /// 加载本地配置并创建菜单栏，只有首次使用才打开设置。
     func applicationDidFinishLaunching(_ notification: Notification) {
+        UNUserNotificationCenter.current().delegate = self
         do { settings = try store.load() }
         catch { configurationError = error.localizedDescription }
         do { countdowns = try countdownStore.load() }
@@ -101,6 +105,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         updates.stop()
         refreshTimer?.invalidate()
+        reminders.reset()
         NSWorkspace.shared.notificationCenter.removeObserver(self)
         NotificationCenter.default.removeObserver(self)
     }
@@ -194,7 +199,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }
     }
 
-    /// 一个调度器同时服务收入和倒计时，隐藏输出不参与刷新。
+    /// 同一个调度器服务收入、可见倒计时及隐藏固定事件的到期删除。
     @objc private func refresh() {
         refreshTimer?.invalidate()
         refreshTimer = nil
@@ -206,6 +211,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         } catch {
             snapshot = try! IncomeEngine().evaluate(nil, at: now)
             income?.render(snapshot, settings: settings, error: error.localizedDescription)
+        }
+        reminders.process(settings: settings, snapshot: snapshot, now: now)
+        let cleaned = countdowns.removingCompleted(at: now)
+        if cleaned != countdowns {
+            do {
+                try countdownStore.save(cleaned)
+                countdowns = cleaned
+                countdownError = nil
+            } catch { countdownError = "已完成倒计时删除失败，请重试：" + error.localizedDescription }
         }
         let results: [CountdownSnapshot]
         do { results = countdowns.events.isEmpty ? [] : try countdownEngine.evaluate(countdowns.events, work: settings, at: now) }
@@ -252,6 +266,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             let boundaryDelay = max(0.1, boundary.timeIntervalSince(now))
             delay = delay.map { min($0, boundaryDelay) } ?? boundaryDelay
         }
+        if settings?.workReminders == true, let boundary = snapshot.nextBoundary {
+            let boundaryDelay = max(0.1, boundary.timeIntervalSince(now))
+            delay = delay.map { min($0, boundaryDelay) } ?? boundaryDelay
+        }
         if let delay {
             let timer = Timer(timeInterval: delay, target: self, selector: #selector(refresh), userInfo: nil, repeats: false)
             timer.tolerance = delay <= 1 ? 0.1 : min(1, delay * 0.1)
@@ -287,13 +305,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     /// 保存成功后发布倒计时设置，失败不会覆盖当前状态。
     private func saveCountdowns(_ next: CountdownPreferences) throws {
-        try countdownStore.save(next)
-        countdowns = next; countdownError = nil
+        try next.validate()
+        let cleaned = next.removingCompleted(at: Date())
+        try countdownStore.save(cleaned)
+        countdowns = cleaned; countdownError = nil
         refresh()
     }
 
     /// 独立入口可用于未填写工资的固定日期倒计时。
     private func showCountdowns() {
+        refresh()
         if income != nil { incomePanel.close() }
         if countdownWindow?.window?.isVisible != true {
             countdownWindow = CountdownWindowController(preferences: countdowns, legacyIncome: settings?.menuBarIncome == true, onSave: { [weak self] next in try self?.saveCountdowns(next) })
@@ -325,8 +346,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private func save(_ next: WorkSettings) throws {
         _ = try IncomeEngine().evaluate(next, at: Date())
         try store.save(next)
+        reminders.reset()
         settings = next
         configurationError = nil
+        if next.workReminders { reminders.requestAuthorization() }
         refresh()
     }
 
@@ -341,6 +364,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         try countdownStore.clear()
         countdowns = CountdownPreferences()
         countdownWindow?.close()
+        reminders.reset()
         try store.clear()
         updates.reset()
         settings = nil
@@ -415,5 +439,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         alert.informativeText = message
         alert.addButton(withTitle: "好")
         alert.runModal()
+    }
+
+    /// 应用在前台时仍显示工作提醒横幅，不改变通知正文内容。
+    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification,
+                                            withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        completionHandler([.banner, .sound])
     }
 }
