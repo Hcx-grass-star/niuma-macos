@@ -1,6 +1,7 @@
 {
-  "version": "0.3.5",
-  "notes": "## 牛马上班 0.3.5\n\n- Windows 桌面宠物支持导入 Codex v2 宠物资源包（ZIP），校验元数据和 1536×2288 WebP 图集后保存并切换动画。\n- 宠物按工作状态切换动画行，导入失败时保留当前资源并回退内置牛马。\n- 优化 macOS 菜单栏倒计时计算器和状态更新，减少重复布局与系统通知。\n- macOS 通用包包含 arm64 与 x86_64，采用 ad-hoc 临时签名，首次打开可能需要按安装说明放行。\n\nWindows 安装包和 Windows 真机透明窗口、托盘、资源导入行为待 Windows 环境验收。\n\nmacOS 安装包 SHA256：`4268d8431ed8e81f4637096666bab00ea9054e8f2275e5428942f1e185eeff37`\n",
-  "url": "https://github.com/Hcx-grass-star/niuma-macos/releases/tag/v0.3.5",
-  "macos": "https://github.com/Hcx-grass-star/niuma-macos/releases/download/v0.3.5/niuma-0.3.5-macOS-universal.zip"
+  "version": "0.3.6",
+  "notes": "# 牛马上班 0.3.6\n\n## 更新内容\n\n- 固定日期倒计时到期后自动删除，重新打开应用也会清理已过期的启用项。支持原生 macOS 和 Tauri 共用前端。\n- 已完成主倒计时删除后自动选择剩余事件；全部完成时收起倒计时区域。关闭的记录保留，循环下班继续寻找下一班。\n- 隐藏面板时只等待最近到期目标，不新增逐秒后台轮询；删除失败时保留原配置并提示。\n- 原生 macOS 新增上班、非计薪休息开始/结束及下班提醒，默认关闭，保存开启后请求系统通知权限；通知不包含工资金额。\n- 原生收入面板优化上班前、休息和下班后的状态文案。\n\n## 验证与交付范围\n\n- 收入、倒计时、配置保存重载和更新源 HTTP 集成验证通过。\n- AppKit 到期删除、菜单栏回退、旧配置兼容、面板和设置交互检查通过。通用 UI 首次运行在再次打开面板处失败，带焦点诊断复跑通过；不将单次通过作为长期稳定性证明。\n- 浏览器验证了 Tauri 共用前端到期删除、刷新后不恢复、存储失败提示与恢复路径。\n- macOS 提供 arm64 / x86_64 通用包，沿用 ad-hoc 签名，未进行 Apple Developer ID 公证。\n- Windows 安装器由对应源码的 GitHub Actions 构建；Windows/Intel/旧版 macOS 真机、真实通知权限与长时运行尚未完成验收。\n\n源码归档分支：`release/0.3.6`；发布标签：`v0.3.6`；原生构建号：`10`。\n",
+  "url": "https://github.com/Hcx-grass-star/niuma-macos/releases/tag/v0.3.6",
+  "macos": "https://github.com/Hcx-grass-star/niuma-macos/releases/download/v0.3.6/niuma-0.3.6-macOS-universal.zip",
+  "windows": "https://github.com/Hcx-grass-star/niuma-macos/releases/download/v0.3.6/niuma-0.3.6-windows-x64-setup.exe"
 }
