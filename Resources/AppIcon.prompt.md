@@ -1,5 +1,9 @@
 # 牛马上班应用图标
 
+2026-11-12：当前图标采用已选定的A「微笑小牛」矢量稿，源文件为 `Artwork/AppIcon.svg`；`AppIcon.png` 与 `AppIcon.icns` 均由该源稿导出。菜单栏使用 `Artwork/MenuBarCow.svg`，木鱼使用 `Artwork/Woodfish.svg`。以下保留的是旧版钱币图标的历史生成说明，不代表当前资源。
+
+## 旧版生成记录
+
 使用内置 `image_gen` 工具生成，透明背景；原始生成图通过系统 `sips` 缩放为 1024 × 1024 PNG，再使用 `iconutil` 打包为包含标准与 Retina 尺寸的 ICNS。以下保留最终生成提示词，便于后续调整图标。
 
 ```text

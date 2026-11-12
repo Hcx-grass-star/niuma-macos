@@ -125,6 +125,30 @@ public struct IncomeEngine: Sendable {
                               scheduleReason: ChinaHolidayCalendar.reason(on: scheduleDate, settings: settings, calendar: calendar))
     }
 
+    /// 计算任意半开区间的预估收入，复用原班次、休息与跨月折算规则。
+    public func earned(_ settings: WorkSettings, from start: Date, to end: Date) throws -> Decimal {
+        try settings.validate()
+        guard end > start else { return 0 }
+        let origin = calendar.dateInterval(of: .year, for: start)!.start
+        return max(0, try accruedAmount(for: settings, from: origin, through: end)
+                   - accruedAmount(for: settings, from: origin, through: start))
+    }
+
+    /// 战报需要计薪时长时按实际班次交集计算，不将自然离开时长当作计薪时间。
+    public func paidSeconds(_ settings: WorkSettings, from start: Date, to end: Date) throws -> TimeInterval {
+        try settings.validate()
+        guard end > start else { return 0 }
+        var day = calendar.date(byAdding: .day, value: -1, to: calendar.startOfDay(for: start))!
+        var total: TimeInterval = 0
+        while day < end {
+            if let shift = try shift(on: day, settings: settings) {
+                total += paidDuration(in: shift, from: max(start, shift.start), to: min(end, shift.end))
+            }
+            day = calendar.date(byAdding: .day, value: 1, to: day)!
+        }
+        return total
+    }
+
     /// 按月汇总完整班次，区间起点之前的跨夜班和最近两天按实际计薪部分截断。
     private func accruedAmount(for settings: WorkSettings, from yearStart: Date, through now: Date) throws -> Decimal {
         let today = calendar.startOfDay(for: now)

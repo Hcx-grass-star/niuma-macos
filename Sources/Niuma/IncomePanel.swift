@@ -67,6 +67,12 @@ final class IncomePanelBackgroundView: NSView {
     /// 收起后移除辅助功能观察，不继续处理后台材质变化。
     deinit { accessibilityNotifications.removeObserver(self) }
 
+    /// 普通背景的内容容器与最终面板尺寸保持一致，避免连续切页时旧高度裁切顶部。
+    override func setFrameSize(_ newSize: NSSize) {
+        super.setFrameSize(newSize)
+        if contentView.superview === self { contentView.frame = bounds }
+    }
+
     /// 相同配置直接返回，避免收入刷新时查询系统外观或重建材质。
     func apply(_ settings: PanelAppearanceSettings) {
         guard appliedSettings != settings else { return }

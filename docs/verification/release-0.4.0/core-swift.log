@@ -1,0 +1,33 @@
+Building for debugging...
+[Planning deferred tasks]
+[3 / 13]
+[4 / 14] NiumaCore
+[15 / 25] NiumaCore
+[20 / 25] NiumaCore
+/Users/huacaoxing/Code/Porject/niuma-macos/Package.swift: NiumaCore: ld: warning: search path '/Library/Developer/CommandLineTools/Developer/Library/Frameworks' not found
+[30 / 32] NiumaIntegrationTests-product
+[32 / 34] NiumaIntegrationTests-product/Users/huacaoxing/Code/Porject/niuma-macos/Package.swift: NiumaIntegrationTests-product: ld: warning: search path '/Library/Developer/CommandLineTools/Developer/usr/lib' not found
+/Users/huacaoxing/Code/Porject/niuma-macos/Package.swift: NiumaIntegrationTests-product: ld: warning: search path '/Library/Developer/CommandLineTools/Developer/Library/Frameworks' not found
+
+Build complete! (1.47秒)
+PASS: 月薪及休息边界
+PASS: 日薪、折算及带薪休息
+PASS: 跨夜及跨月
+PASS: 休息日和首次使用
+PASS: 无效保存保护旧设置
+PASS: 重置及损坏配置
+PASS: 多段休息及下次状态边界
+PASS: 夏令时歧义拒绝
+PASS: 本年预估收入
+PASS: 年度回算边界
+PASS: 中国节假日及调休
+PASS: 本月收入与菜单栏选择
+PASS: 收入面板显示偏好
+PASS: 面板外观持久化与旧配置兼容
+PASS: 复用引擎后的配置变更
+PASS: 包环境识别及自启动准入
+PASS: 工作提醒边界
+PASS: 上班打气计薪、战报与愿望持久化
+PASS: 倒计时保存重载、跨夜周末、到达和按需调度
+PASS: 更新版本和24小时限频；HTTP集成请运行 npm run test:updates
+全部 18 组收入集成与更新检查验证通过。

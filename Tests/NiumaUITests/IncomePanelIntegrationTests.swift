@@ -30,6 +30,8 @@ struct IncomePanelIntegrationTests {
     static weak var closedSettingsWindow: NSWindow?
     /// 验证原生玻璃视图没有在面板关闭后被观察者或父视图保留。
     static weak var closedGlassView: NSView?
+    /// 保存返回的两个窗口状态都必须实际验收，防止异步回调未执行却误判释放成功。
+    static var appearanceChecks = 0
 
     /// 创建隔离工资配置并启动 AppKit，任一断言失败立即返回非零。
     static func main() throws {
@@ -67,7 +69,10 @@ struct IncomePanelIntegrationTests {
                     let objectType = note.object.map { String(describing: type(of: $0)) } ?? "nil"
                     MainActor.assumeIsolated {
                         let panel = NSApp.windows.compactMap { $0 as? IncomePanel }.first
-                        print("event tick=\(tick) \(eventName) object=\(objectType) active=\(NSApp.isActive) panelVisible=\(panel?.isVisible ?? false) panelKey=\(panel?.isKeyWindow ?? false)")
+                        let front = NSWorkspace.shared.frontmostApplication
+                        let mouseAge = CGEventSource.secondsSinceLastEventType(.combinedSessionState, eventType: .leftMouseDown)
+                        let keyAge = CGEventSource.secondsSinceLastEventType(.combinedSessionState, eventType: .keyDown)
+                        print("event tick=\(tick) \(eventName) object=\(objectType) active=\(NSApp.isActive) panelVisible=\(panel?.isVisible ?? false) panelKey=\(panel?.isKeyWindow ?? false) front=\(front?.bundleIdentifier ?? "unknown") frontPID=\(front?.processIdentifier ?? 0) mouseAge=\(mouseAge) keyAge=\(keyAge)")
                         fflush(nil)
                     }
                 })
@@ -185,34 +190,14 @@ struct IncomePanelIntegrationTests {
                 let error = descendants(of: window.contentView!).compactMap { $0 as? NSTextField }
                     .first { $0.accessibilityIdentifier() == "settingsError" }
                 print("保存动作后：visible=\(window.isVisible)，表单错误=\(error?.stringValue ?? "无")")
-            }
-            if tick == 7 {
-                guard let panel = NSApp.windows.compactMap({ $0 as? IncomePanel }).first else {
-                    require(false, "保存外观后应创建收入面板"); return
+                // 保存动作先排入返回面板的任务，紧随其后检查；不假定其他应用两秒内不会取得焦点。
+                DispatchQueue.main.async { [expected] in
+                    do { try verifySavedAppearance(expected) }
+                    catch { require(false, "保存后的外观检查失败：\(error)") }
                 }
-                require(panel.isVisible && panel.isKeyWindow, "保存外观后应返回收入面板并取得焦点")
-                let background = panel.contentViewController!.view as! IncomePanelBackgroundView
-                let saved = try SettingsStore(directory: directory).load()!
-                require(saved.panelAppearance == expected && saved.salary == 21000, "保存重载应保留外观且不改变工资")
-                require(background.appearance?.name == .darkAqua, "收入面板应使用已保存深色外观")
-                if #available(macOS 26.0, *) {
-                    let glasses = descendants(of: background).compactMap { $0 as? NSGlassEffectView }
-                    let reduced = NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency
-                        || NSWorkspace.shared.accessibilityDisplayShouldIncreaseContrast
-                    require(glasses.count == (reduced ? 0 : 1), "应按系统可读性要求使用唯一原生玻璃或普通背景")
-                    if let glass = glasses.first {
-                        require(glass.contentView === background.contentView, "业务控件必须嵌入原生玻璃的 contentView")
-                        require(glass.cornerRadius == 12 && glass.tintColor?.panelTintHex == expected.tintHex, "玻璃应保留圆角与染色")
-                        closedGlassView = glass
-                    }
-                }
-                require(background.contentView.bounds.size == background.bounds.size, "原生材质不应挤压业务布局")
-                sample("appearance-glass-panel")
-                closedController = panel.contentViewController
-                panel.close()
             }
             if tick == 9 {
-                require(closedController == nil && closedGlassView == nil, "收起面板应释放内容与原生玻璃")
+                require(appearanceChecks == 1 && closedController == nil && closedGlassView == nil, "收起面板应释放已验收的内容与原生玻璃")
                 sample("appearance-after-glass")
                 commands.performActionForItem(at: 1)
             }
@@ -236,23 +221,47 @@ struct IncomePanelIntegrationTests {
                 controls.mode.selectItem(at: 1)
                 controls.tintEnabled.state = .off
                 settingsButton("保存并返回", in: window).performClick(nil)
+                var plain = PanelAppearanceSettings(); plain.mode = .light
+                DispatchQueue.main.async { [plain] in
+                    do { try verifySavedAppearance(plain) }
+                    catch { require(false, "普通背景检查失败：\(error)") }
+                }
             }
             if tick == 15 {
-                let panel = NSApp.windows.compactMap { $0 as? IncomePanel }.first!
-                require(panel.isVisible && panel.contentViewController != nil, "再次保存应展开收入面板")
-                let background = panel.contentViewController!.view as! IncomePanelBackgroundView
-                let saved = try SettingsStore(directory: directory).load()!.panelAppearance
-                require(!saved.glassEnabled && saved.mode == .light && saved.tintHex == nil, "应保存浅色普通背景并清除染色")
-                require(background.appearance?.name == .aqua, "关闭玻璃后应应用浅色外观")
-                if #available(macOS 26.0, *) {
-                    require(!descendants(of: background).contains { $0 is NSGlassEffectView }, "关闭玻璃不得保留特效视图")
-                }
-                verifyPanelAppearance(panel)
-                panel.close()
+                require(appearanceChecks == 2 && closedController == nil, "两次保存返回与关闭释放都必须完成")
                 print("PASS: 外观控件保存与取消、重载、原生玻璃嵌入与释放、主题、染色及普通圆角回退")
                 finish(code: 0)
             }
         } catch { require(false, "外观集成检查失败：\(error)") }
+    }
+
+    /// 在真实保存返回任务之后检查焦点、文件、材质和尺寸，再关闭并由后续阶段验证释放。
+    static func verifySavedAppearance(_ expected: PanelAppearanceSettings) throws {
+        guard let panel = NSApp.windows.compactMap({ $0 as? IncomePanel }).first else {
+            require(false, "保存外观后应创建收入面板"); return
+        }
+        require(panel.isVisible && panel.isKeyWindow, "保存外观后应返回收入面板并取得焦点")
+        let background = panel.contentViewController!.view as! IncomePanelBackgroundView
+        let saved = try SettingsStore(directory: directory).load()!
+        require(saved.panelAppearance == expected && saved.salary == 21000, "保存重载应保留外观且不改变工资")
+        require(background.appearance?.name == expected.mode.nativeAppearance?.name, "收入面板应使用已保存主题")
+        if #available(macOS 26.0, *) {
+            let glasses = descendants(of: background).compactMap { $0 as? NSGlassEffectView }
+            let reduced = NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency
+                || NSWorkspace.shared.accessibilityDisplayShouldIncreaseContrast
+            require(glasses.count == (expected.glassEnabled && !reduced ? 1 : 0), "应按设置和系统可读性使用唯一玻璃或普通背景")
+            if let glass = glasses.first {
+                require(glass.contentView === background.contentView, "业务控件必须嵌入原生玻璃的contentView")
+                require(glass.cornerRadius == 12 && glass.tintColor?.panelTintHex == expected.tintHex, "玻璃应保留圆角与染色")
+                closedGlassView = glass
+            }
+        }
+        require(background.contentView.bounds.size == background.bounds.size, "原生材质不应挤压业务布局")
+        if !expected.glassEnabled { verifyPanelAppearance(panel) }
+        sample(expected.glassEnabled ? "appearance-glass-panel" : "appearance-normal-panel")
+        appearanceChecks += 1
+        closedController = panel.contentViewController
+        panel.close()
     }
 
     /// 在异步窗口切换完成后检查设置页，失败时保留窗口诊断并正常清理测试数据。

@@ -85,12 +85,23 @@ final class IncomeViewController: NSViewController {
     /// 保存并切换金额隐私状态。
     var onPrivacy: (() -> Void)?
 
+    /// 四页导航保留收入为默认入口，不改变倒计时及设置快捷键。
+    private let navigation = PrototypeTabs()
+    /// 打气内容只在面板存活期间创建，隐藏时解除自动木鱼任务。
+    private let cheerContent = CheerContentView()
+    /// 保存打气配置的应用级入口。
+    var onSaveCheer: ((CheerPreferences) throws -> Void)?
+    /// 页面切换后请求同步当前工资及打气投影。
+    var onCheerPageChange: (() -> Void)?
+    /// 功德由应用会话累加，不计入收入。
+    var onStrike: (() -> Int)?
+
     /// 创建顶部工具栏、收入卡片、倒计时列表和底部操作区。
     override func loadView() {
         let background = IncomePanelBackgroundView(frame: NSRect(x: 0, y: 0, width: Self.panelWidth, height: 380))
         view = background
         let contentView = background.contentView
-        let icon = NSImageView(image: NSImage(systemSymbolName: "leaf.fill", accessibilityDescription: nil)!)
+        let icon = NSImageView(image: NSImage(contentsOf: ArtworkAsset.cow.url)!)
         icon.contentTintColor = .systemGreen
         icon.widthAnchor.constraint(equalToConstant: 17).isActive = true
         icon.heightAnchor.constraint(equalToConstant: 17).isActive = true
@@ -185,7 +196,18 @@ final class IncomeViewController: NSViewController {
         content.spacing = 14
         content.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(content)
-        for item in [header, incomeCard, countdownSection, quote, separator(), footer] {
+        navigation.selectedSegment = 0
+        navigation.target = self; navigation.action = #selector(changeCheerPage)
+        navigation.setAccessibilityIdentifier("cheerNavigation")
+        cheerContent.onSave = { [weak self] next in try self?.onSaveCheer?(next) }
+        cheerContent.onNavigate = { [weak self] index in self?.selectCheerPage(index) }
+        cheerContent.onStrike = { [weak self] in self?.onStrike?() ?? 0 }
+        cheerContent.onResize = { [weak self] in
+            guard let self else { return }
+            self.resizePanel()
+            if let window = self.view.window { window.setContentSize(self.preferredContentSize) }
+        }
+        for item in [header, navigation, incomeCard, countdownSection, quote, cheerContent, separator(), footer] {
             content.addArrangedSubview(item)
             item.widthAnchor.constraint(equalTo: content.widthAnchor).isActive = true
         }
@@ -206,7 +228,7 @@ final class IncomeViewController: NSViewController {
         currentSection.isHidden = settings?.showCurrentIncome == false
         monthSection.isHidden = settings?.showMonthlyIncome == false
         yearSection.isHidden = settings?.showYearlyIncome == false
-        incomeCard?.isHidden = currentSection.isHidden && monthSection.isHidden && yearSection.isHidden
+        incomeCard?.isHidden = navigation.selectedSegment != 0 || (currentSection.isHidden && monthSection.isHidden && yearSection.isHidden)
         let hidden = settings?.hideAmounts == true
         amount.stringValue = hidden ? "••••" : Self.money(snapshot.amount)
         amount.font = .monospacedDigitSystemFont(ofSize: amount.stringValue.count > 13 ? 27 : 40, weight: .semibold)
@@ -216,7 +238,7 @@ final class IncomeViewController: NSViewController {
         status.stringValue = "● " + (error == nil ? statusText(for: snapshot) : "检查设置")
         status.textColor = error != nil ? .systemRed : snapshot.phase == .working ? .systemGreen : .secondaryLabelColor
         quote.stringValue = error ?? encouragement(for: snapshot)
-        quote.isHidden = error == nil && settings?.encouragement == false
+        quote.isHidden = navigation.selectedSegment != 0 || (error == nil && settings?.encouragement == false)
         privacy.toolTip = hidden ? "显示金额" : "隐藏金额"
         privacy.setAccessibilityLabel(privacy.toolTip)
         privacy.image = NSImage(systemSymbolName: hidden ? "eye.slash" : "eye", accessibilityDescription: privacy.toolTip)
@@ -236,9 +258,30 @@ final class IncomeViewController: NSViewController {
             fields.row.toolTip = snapshot.map { $0.event.title + "：" + $0.detailText }
             if index < countdownSeparators.count { countdownSeparators[index].isHidden = index + 1 >= min(3, snapshots.count) }
         }
-        countdownSection.isHidden = snapshots.isEmpty
+        countdownSection.isHidden = navigation.selectedSegment != 0 || snapshots.isEmpty
         resizePanel()
     }
+
+    /// 将已结算投影展示到同一个面板，隐私设置覆盖所有新增金额入口。
+    func renderCheer(_ preferences: CheerPreferences, report: BreakReport?, hidden: Bool, phase: WorkPhase, away: Bool, merit: Int, error: String?) {
+        _ = view
+        cheerContent.render(preferences, report: report, hidden: hidden, phase: phase, away: away, merit: merit, error: error)
+        resizePanel()
+    }
+
+    /// 通知点击与页面快捷入口走同一切换路径。
+    func selectCheerPage(_ index: Int) {
+        _ = view
+        navigation.selectedSegment = index
+        cheerContent.selectPage(index)
+        onCheerPageChange?()
+    }
+
+    /// 面板关闭前显式停掉自动敲击，防止隐藏后台继续运行。
+    func stopCheer() { cheerContent.stop() }
+
+    /// 导航选择不新建窗口，保留现有失焦收起语义。
+    @objc private func changeCheerPage() { selectCheerPage(navigation.selectedSegment) }
 
     /// 内容高度变化时才调整面板，避免秒级计时导致窗口反复布局。
     private func resizePanel() {

@@ -51,7 +51,7 @@ import os, sys
 root = Path(sys.argv[1])
 digest = sha256()
 # 图标参与构建指纹，区分同一份代码使用不同图标的应用包。
-for path in sorted((root / 'Sources').rglob('*.swift')) + sorted((root / 'Sources/NiumaCore/Resources').rglob('*.json')) + [root / 'Package.swift', root / 'Package.resolved', root / 'Resources/Info.plist', root / 'Resources/AppIcon.icns']:
+for path in sorted((root / 'Sources').rglob('*.swift')) + sorted(path for path in (root / 'Sources/NiumaCore/Resources').rglob('*') if path.is_file()) + [root / 'Package.swift', root / 'Package.resolved', root / 'Resources/Info.plist', root / 'Resources/AppIcon.icns']:
     digest.update(str(path.relative_to(root)).encode('utf-8'))
     digest.update(path.read_bytes())
 digest.update(('distribution=' + os.environ.get('NIUMA_DISTRIBUTION', '0')).encode('utf-8'))

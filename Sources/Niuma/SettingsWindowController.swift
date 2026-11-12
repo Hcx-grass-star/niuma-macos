@@ -183,7 +183,6 @@ final class SettingsWindowController: NSWindowController, NSTextFieldDelegate, N
         chinaHolidayStatus.font = .systemFont(ofSize: 11)
         chinaHolidayStatus.textColor = .secondaryLabelColor
         stack.addArrangedSubview(chinaHolidayStatus)
-        updateHolidayStatus()
         start.stringValue = timeText(original.startMinute)
         end.stringValue = timeText(original.endMinute)
         start.setAccessibilityLabel("上班时间")
@@ -303,7 +302,8 @@ final class SettingsWindowController: NSWindowController, NSTextFieldDelegate, N
             child.widthAnchor.constraint(lessThanOrEqualTo: stack.widthAnchor).isActive = true
         }
         updateLoginState()
-        updatePreview()
+        // 所有选择器初始化后才预览，日薪草稿不会访问尚未选中的 -1 索引。
+        updateHolidayStatus()
     }
 
     /// 创建含业务说明的原生文本标签。

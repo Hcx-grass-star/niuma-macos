@@ -1,0 +1,25 @@
+
+> niuma-cross-platform@0.3.6 test:installation
+> swift run --disable-automatic-resolution InstallationIntegrationTests
+
+Building for debugging...
+[Planning deferred tasks]
+[4 / 18]
+[5 / 19] NiumaCore
+[7 / 20] NiumaCore
+[10 / 20] NiumaInstallation
+[13 / 23] NiumaInstallation
+[18 / 23] NiumaInstallation
+/Users/huacaoxing/Code/Porject/niuma-macos/Package.swift: NiumaInstallation: ld: warning: search path '/Library/Developer/CommandLineTools/Developer/Library/Frameworks' not found
+[20 / 24] InstallationIntegrationTests-product
+[23 / 26] InstallationIntegrationTests-product
+[25 / 26] InstallationIntegrationTests-product/Users/huacaoxing/Code/Porject/niuma-macos/Package.swift: InstallationIntegrationTests-product: ld: warning: search path '/Library/Developer/CommandLineTools/Developer/usr/lib' not found
+/Users/huacaoxing/Code/Porject/niuma-macos/Package.swift: InstallationIntegrationTests-product: ld: warning: search path '/Library/Developer/CommandLineTools/Developer/Library/Frameworks' not found
+
+Build complete! (2.06秒)
+PASS: 新版覆盖、旧包提交后回收、下载源及工资配置保留
+PASS: 新版启动失败后的真实文件回滚
+PASS: 拒绝降级和错误应用身份
+PASS: 拒绝篡改包和符号链接；旧版不受影响
+PASS: 真实旧副本回收；同版本、较新版本和其他应用保留；测试回收物已清理
+全部安装文件集成验证通过。

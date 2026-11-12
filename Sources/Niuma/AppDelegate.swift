@@ -10,6 +10,8 @@ import NiumaCore
 final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, UNUserNotificationCenterDelegate {
     /// 同一环境跨更新保持身份稳定，不同环境隔离配置目录及单实例判断。
     static let identifier = AppBuildChannel.current.bundleIdentifier
+    /// 测试注入时间以覆盖真实协调链路，生产使用系统时钟。
+    private let clock: () -> Date
     /// 实际配置存储，不包含收入历史或按秒日志。
     private let store: SettingsStore
     /// 复用有界排班计数，避免收入按秒刷新时重复遍历本年日期。
@@ -46,6 +48,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, UNUs
     private let updates: UpdateController
     /// 依据收入边界发送不含金额的工作节点提醒。
     private let reminders = WorkReminderCoordinator()
+    /// 新功能独立持久化，不迁移或覆盖原工资配置。
+    private var cheer = CheerPreferences()
+    /// 损坏配置只读保护，避免默认值覆盖用户愿望。
+    private var cheerLoadFailed = false
+    /// 新功能错误在面板显示，原收入计算继续运行。
+    private var cheerError: String?
+    /// 最近一条战报仅驻留应用会话，不写入磁盘。
+    private var breakReport: BreakReport?
+    /// 去重锁屏、屏幕与系统休眠等交叠事件。
+    private var breakSession = BreakSession()
+    /// 功德只在当前应用会话累加，关闭面板不清零。
+    private var woodMerit = 0
+    /// 本功能唯一配置文件与工资使用相同的环境隔离目录。
+    private var cheerStore: CheerStore { CheerStore(directory: store.directory) }
+
     /// 上一次写入菜单栏的标题，避免相同内容触发重绘。
     private var lastStatusTitle: String?
     /// 上一次写入菜单栏的提示文本，避免相同内容重复更新。
@@ -57,8 +74,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, UNUs
 
     /// 默认按包环境选择配置；集成验证可注入独立存储与更新偏好，避免修改用户数据。
     init(store: SettingsStore = SettingsStore(directory: FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        .appendingPathComponent(identifier, isDirectory: true)), updates: UpdateController = UpdateController()) {
+        .appendingPathComponent(identifier, isDirectory: true)), updates: UpdateController = UpdateController(), clock: @escaping () -> Date = Date.init) {
         self.store = store
+        self.clock = clock
         self.updates = updates
         super.init()
     }
@@ -70,12 +88,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, UNUs
         catch { configurationError = error.localizedDescription }
         do { countdowns = try countdownStore.load() }
         catch { countdownError = error.localizedDescription }
+        do {
+            cheer = try cheerStore.load()
+            if !cheer.wishes.isEmpty {
+                let uncertain = !CheerPreferences.sameIncomeRules(cheer.work, settings)
+                    || cheer.timeZone != incomeEngine.calendar.timeZone.identifier
+                    || (cheer.checkpoint.map { $0 > clock() } ?? false)
+                cheer = try cheer.settled(at: clock(), work: settings, engine: incomeEngine)
+                try cheerStore.save(cheer)
+                if uncertain { cheerError = "累计规则或时间发生变化，未补算无法确定的区间；已有进度已保留。" }
+            }
+        } catch { cheerLoadFailed = true; cheerError = error.localizedDescription }
+        observeCheerEvents()
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         item.button?.target = self
         item.button?.action = #selector(handleStatusClick)
         item.button?.sendAction(on: [.leftMouseUp, .rightMouseUp])
         item.button?.setAccessibilityLabel(AppBuildChannel.current.displayName)
-        item.button?.image = NSImage(systemSymbolName: "leaf", accessibilityDescription: AppBuildChannel.current.displayName)
+        item.button?.image = NSImage(contentsOf: ArtworkAsset.menuBarCow.url)
+        item.button?.image?.size = NSSize(width: 18, height: 18)
         item.button?.image?.isTemplate = true
         item.button?.font = .monospacedDigitSystemFont(ofSize: 11, weight: .regular)
         item.button?.imagePosition = .imageLeft
@@ -103,6 +134,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, UNUs
 
     /// 退出时释放定时任务和观察者，不保留独立后台进程。
     func applicationWillTerminate(_ notification: Notification) {
+        checkpointCheer()
+        income?.stopCheer()
+        DistributedNotificationCenter.default().removeObserver(self)
         updates.stop()
         refreshTimer?.invalidate()
         reminders.reset()
@@ -171,6 +205,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, UNUs
             controller.onCountdowns = { [weak self] in self?.showCountdowns() }
             controller.onSettings = { [weak self] in self?.showSettings() }
             controller.onPrivacy = { [weak self] in self?.togglePrivacy() }
+            controller.onSaveCheer = { [weak self] next in try self?.saveCheer(next) }
+            controller.onCheerPageChange = { [weak self] in self?.refresh() }
+            controller.onStrike = { [weak self] in
+                guard let self else { return 0 }
+                self.woodMerit += 1; return self.woodMerit
+            }
             income = controller
             incomePanel.contentViewController = controller
             refresh()
@@ -186,6 +226,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, UNUs
 
     /// 关闭后释放收入视图；下一轮事件再归还分配器中已空闲的页面。
     func windowWillClose(_ notification: Notification) {
+        income?.stopCheer()
+        checkpointCheer()
         incomePanel.contentViewController = nil
         income = nil
         refresh()
@@ -203,7 +245,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, UNUs
     @objc private func refresh() {
         refreshTimer?.invalidate()
         refreshTimer = nil
-        let now = Date()
+        let now = clock()
         let snapshot: IncomeSnapshot
         do {
             snapshot = try incomeEngine.evaluate(settings, at: now)
@@ -211,6 +253,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, UNUs
         } catch {
             snapshot = try! IncomeEngine().evaluate(nil, at: now)
             income?.render(snapshot, settings: settings, error: error.localizedDescription)
+        }
+        if let income {
+            do {
+                let projected = try cheer.settled(at: now, work: settings, engine: incomeEngine)
+                income.renderCheer(projected, report: breakReport, hidden: settings?.hideAmounts == true,
+                    phase: snapshot.phase, away: breakSession.isAway, merit: woodMerit, error: cheerError)
+            } catch {
+                income.renderCheer(cheer, report: breakReport, hidden: settings?.hideAmounts == true,
+                    phase: snapshot.phase, away: breakSession.isAway, merit: woodMerit, error: error.localizedDescription)
+            }
         }
         reminders.process(settings: settings, snapshot: snapshot, now: now)
         let cleaned = countdowns.removingCompleted(at: now)
@@ -266,7 +318,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, UNUs
             let boundaryDelay = max(0.1, boundary.timeIntervalSince(now))
             delay = delay.map { min($0, boundaryDelay) } ?? boundaryDelay
         }
-        if settings?.workReminders == true, let boundary = snapshot.nextBoundary {
+        if settings?.workReminders == true || (income != nil && incomePanel.isVisible), let boundary = snapshot.nextBoundary {
             let boundaryDelay = max(0.1, boundary.timeIntervalSince(now))
             delay = delay.map { min($0, boundaryDelay) } ?? boundaryDelay
         }
@@ -276,6 +328,83 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, UNUs
             RunLoop.main.add(timer, forMode: .common)
             refreshTimer = timer
         }
+    }
+
+    /// 注册公开的屏幕、休眠及用户切换事件；锁屏兼容信号单独标记，不把屏幕熄灭叫作锁屏。
+    private func observeCheerEvents() {
+        let center = NSWorkspace.shared.notificationCenter
+        for name in [NSWorkspace.screensDidSleepNotification, NSWorkspace.willSleepNotification, NSWorkspace.sessionDidResignActiveNotification] {
+            center.addObserver(self, selector: #selector(cheerLeft(_:)), name: name, object: nil)
+        }
+        for name in [NSWorkspace.screensDidWakeNotification, NSWorkspace.didWakeNotification, NSWorkspace.sessionDidBecomeActiveNotification] {
+            center.addObserver(self, selector: #selector(cheerReturned(_:)), name: name, object: nil)
+        }
+        let distributed = DistributedNotificationCenter.default()
+        distributed.addObserver(self, selector: #selector(cheerLeft(_:)), name: NSNotification.Name("com.apple.screenIsLocked"), object: nil)
+        distributed.addObserver(self, selector: #selector(cheerReturned(_:)), name: NSNotification.Name("com.apple.screenIsUnlocked"), object: nil)
+    }
+
+    /// 成对事件映射到同一原因，锁屏与休眠交叠时不会提前结束会话。
+    private func cheerReason(_ name: Notification.Name) -> String {
+        switch name {
+        case NSWorkspace.screensDidSleepNotification, NSWorkspace.screensDidWakeNotification: return "screen"
+        case NSWorkspace.willSleepNotification, NSWorkspace.didWakeNotification: return "sleep"
+        case NSWorkspace.sessionDidResignActiveNotification, NSWorkspace.sessionDidBecomeActiveNotification: return "session"
+        default: return "lock"
+        }
+    }
+
+    /// 首次离开记录起点；所有离开原因同时暂停自动木鱼。
+    @objc private func cheerLeft(_ notification: Notification) {
+        breakSession.leave(reason: cheerReason(notification.name), at: clock())
+        checkpointCheer()
+        refresh()
+    }
+
+    /// 返回时结算一次区间交集；关闭通知或拒绝权限不影响面板结果。
+    @objc private func cheerReturned(_ notification: Notification) {
+        do {
+            let report = try breakSession.returned(reason: cheerReason(notification.name), at: clock(), work: cheer.reportsEnabled ? settings : nil, engine: incomeEngine)
+            if cheer.reportsEnabled, let report {
+                breakReport = report
+                if cheer.notificationsEnabled {
+                    let content = UNMutableNotificationContent()
+                    content.title = "欢迎回来，辛苦了"
+                    content.body = "离开期间，收入又向前走了一点。打开牛马上班查看战报。"
+                    let request = UNNotificationRequest(identifier: "niuma.break." + UUID().uuidString, content: content, trigger: nil)
+                    UNUserNotificationCenter.current().add(request)
+                }
+            }
+        } catch { cheerError = "本次计薪区间无法确定，未生成战报。" }
+        refresh()
+    }
+
+    /// 在生命周期边界结算，不新增逐秒或周期性写盘任务。
+    private func checkpointCheer() {
+        guard !cheerLoadFailed, !cheer.wishes.isEmpty else { return }
+        do {
+            let next = try cheer.settled(at: clock(), work: settings, engine: incomeEngine)
+            try cheerStore.save(next); cheer = next
+        } catch { cheerError = error.localizedDescription }
+    }
+
+    /// 用户编辑只改变目标与开关；累计基准始终以保存时的真实投影为准。
+    private func saveCheer(_ requested: CheerPreferences) throws {
+        guard !cheerLoadFailed else { throw CheerError.invalid("原 cheer.json 无法读取，已禁止覆盖；请先备份并检查该文件。") }
+        var next = try cheer.settled(at: clock(), work: settings, engine: incomeEngine)
+        next.wishes = requested.wishes.map { wish in
+            var value = wish
+            if !cheer.wishes.contains(where: { $0.id == wish.id }) { value.baseline = next.earned }
+            return value
+        }
+        next.reportsEnabled = requested.reportsEnabled; next.notificationsEnabled = requested.notificationsEnabled
+        next.autoWood = requested.autoWood; next.sound = requested.sound
+        try cheerStore.save(next)
+        let requestPermission = next.reportsEnabled && next.notificationsEnabled && (!cheer.reportsEnabled || !cheer.notificationsEnabled)
+        if next.reportsEnabled != cheer.reportsEnabled { breakSession.invalidate() }
+        cheer = next; cheerError = nil
+        if requestPermission { reminders.requestAuthorization() }
+        refresh()
     }
 
     /// 固定宽度内优先保留倒计时时间，完整内容始终放在悬停提示中。
@@ -306,7 +435,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, UNUs
     /// 保存成功后发布倒计时设置，失败不会覆盖当前状态。
     private func saveCountdowns(_ next: CountdownPreferences) throws {
         try next.validate()
-        let cleaned = next.removingCompleted(at: Date())
+        let cleaned = next.removingCompleted(at: clock())
         try countdownStore.save(cleaned)
         countdowns = cleaned; countdownError = nil
         refresh()
@@ -328,6 +457,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, UNUs
 
     /// 唤醒、时区或系统时间变化时直接重新估算，不追赶计时器事件。
     @objc private func environmentChanged(_ notification: Notification) {
+        if notification.name != NSWorkspace.didWakeNotification {
+            breakSession.invalidate()
+            if !cheerLoadFailed {
+                cheer.checkpoint = clock(); cheer.timeZone = Calendar.autoupdatingCurrent.timeZone.identifier
+                do { if !cheer.wishes.isEmpty { try cheerStore.save(cheer) } }
+                catch { cheerError = error.localizedDescription }
+            }
+            cheerError = "系统时间或时区发生变化，未补算无法确定的区间；已有进度已保留。"
+        }
         incomeEngine = IncomeEngine()
         countdownEngine = CountdownEngine()
         refresh()
@@ -342,10 +480,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, UNUs
         catch { showAlert(error.localizedDescription) }
     }
 
-    /// 保存已验证配置后刷新同一班次，不保留旧收入累计值。
+    /// 工资变更前先按旧规则结算愿望；双文件保存失败时恢复工资并保持内存状态。
     private func save(_ next: WorkSettings) throws {
-        _ = try IncomeEngine().evaluate(next, at: Date())
+        let now = clock()
+        _ = try incomeEngine.evaluate(next, at: now)
+        var settled = try cheer.settled(at: now, work: settings, engine: incomeEngine)
+        settled.work = next
         try store.save(next)
+        do { if !cheerLoadFailed { try cheerStore.save(settled) } }
+        catch {
+            do { if let settings { try store.save(settings) } else { try store.clear() } }
+            catch { configurationError = "工资回滚失败，请重新打开设置确认。" }
+            throw error
+        }
+        if !cheerLoadFailed { cheer = settled }
+        if !CheerPreferences.sameIncomeRules(settings, next) {
+            breakSession.invalidate()
+        }
         reminders.reset()
         settings = next
         configurationError = nil
@@ -361,6 +512,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, UNUs
             throw NSError(domain: Self.identifier, code: 1,
                           userInfo: [NSLocalizedDescriptionKey: "登录启动尚未关闭，未清除工资设置。请检查系统设置后重试。"])
         }
+        try cheerStore.clear()
+        cheer = CheerPreferences(); cheerLoadFailed = false; cheerError = nil
+        breakReport = nil; breakSession.cancel(); woodMerit = 0
         try countdownStore.clear()
         countdowns = CountdownPreferences()
         countdownWindow?.close()
@@ -439,6 +593,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, UNUs
         alert.informativeText = message
         alert.addButton(withTitle: "好")
         alert.runModal()
+    }
+
+    /// 点击战报通知只打开详情，不把金额放进系统通知或操作载荷。
+    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
+                                            withCompletionHandler completionHandler: @escaping () -> Void) {
+        if response.notification.request.identifier.hasPrefix("niuma.break.") {
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                if self.income == nil || !self.incomePanel.isVisible { self.toggleIncomePanel() }
+                self.income?.selectCheerPage(1)
+            }
+        }
+        completionHandler()
     }
 
     /// 应用在前台时仍显示工作提醒横幅，不改变通知正文内容。

@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 256 256">
+<defs><linearGradient id="wood" x1="0" y1="0" x2=".85" y2="1"><stop stop-color="#d5ae80" /><stop offset="1" stop-color="#ab774b" /></linearGradient><linearGradient id="edge" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#c59868" /><stop offset="1" stop-color="#90633f" /></linearGradient><linearGradient id="head" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#d8b38c" /><stop offset="1" stop-color="#b48656" /></linearGradient></defs>
+<g><rect x="123" y="72" width="104" height="11" rx="5.5" fill="#ae7d4f" /><rect x="118" y="60" width="31" height="36" rx="11" fill="url(#head)" /><path d="M124 66Q132 63 140 66" fill="none" stroke="#f0d2ad" stroke-opacity=".6" stroke-width="3" stroke-linecap="round" /></g>
+</svg>

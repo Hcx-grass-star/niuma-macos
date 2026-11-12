@@ -1,0 +1,82 @@
+Building for production...
+[Planning deferred tasks]
+[28 / 47]
+[29 / 48] NiumaCore
+[41 / 100]
+[48 / 100]
+[50 / 100]
+[55 / 100]
+[59 / 100]
+[62 / 100]
+[64 / 100]
+[65 / 100]
+[71 / 100]
+[72 / 100]
+[76 / 100]
+[77 / 100]
+[79 / 100]
+[81 / 100]
+[82 / 100] NiumaCore
+/private/var/folders/33/dhlmtmrx3_gfs18qtv9drgsh0000gn/T/niuma-manual-qa-os8bg_sf/package/Package.swift: NiumaCore: ld: warning: search path '/Library/Developer/CommandLineTools/Developer/Library/Frameworks' not found
+[89 / 101] NiumaInstallation
+[109 / 154]
+[115 / 154]
+[121 / 154]
+[125 / 154]
+[135 / 154]
+[136 / 154]
+[139 / 154]
+[140 / 154]
+[141 / 154]
+[142 / 154]
+[143 / 154] NiumaInstallation
+/private/var/folders/33/dhlmtmrx3_gfs18qtv9drgsh0000gn/T/niuma-manual-qa-os8bg_sf/package/Package.swift: NiumaInstallation: ld: warning: search path '/Library/Developer/CommandLineTools/Developer/Library/Frameworks' not found
+[150 / 155] FixtureApp-product
+[152 / 156] FixtureApp-product
+/private/var/folders/33/dhlmtmrx3_gfs18qtv9drgsh0000gn/T/niuma-manual-qa-os8bg_sf/package/Package.swift: FixtureApp-product: ld: warning: search path '/Library/Developer/CommandLineTools/Developer/usr/lib' not found
+/private/var/folders/33/dhlmtmrx3_gfs18qtv9drgsh0000gn/T/niuma-manual-qa-os8bg_sf/package/Package.swift: FixtureApp-product: ld: warning: search path '/Library/Developer/CommandLineTools/Developer/Library/Frameworks' not found
+[154 / 156] FixtureApp-product
+Build complete! (18.90秒)
+Building for production...
+[Planning deferred tasks]
+[5 / 16]
+[6 / 17] NiumaCore
+[20 / 69]
+[25 / 69]
+[27 / 69]
+[32 / 69]
+[36 / 69]
+[39 / 69]
+[41 / 69]
+[42 / 69]
+[48 / 69]
+[49 / 69]
+[53 / 69]
+[54 / 69]
+[56 / 69]
+[58 / 69]
+[59 / 69] NiumaCore
+/private/var/folders/33/dhlmtmrx3_gfs18qtv9drgsh0000gn/T/niuma-manual-qa-os8bg_sf/package/Package.swift: NiumaCore: ld: warning: search path '/Library/Developer/CommandLineTools/Developer/Library/Frameworks' not found
+[64 / 73] NiumaInstallation
+[82 / 126]
+[92 / 126]
+[96 / 126]
+[99 / 126]
+[104 / 126]
+[110 / 126]
+[113 / 126]
+[114 / 126]
+[115 / 126]
+[116 / 126]
+[117 / 126]
+[118 / 126] NiumaInstallation
+/private/var/folders/33/dhlmtmrx3_gfs18qtv9drgsh0000gn/T/niuma-manual-qa-os8bg_sf/package/Package.swift: NiumaInstallation: ld: warning: search path '/Library/Developer/CommandLineTools/Developer/Library/Frameworks' not found
+[123 / 128] FixtureHelper-product
+[125 / 129] FixtureHelper-product
+[127 / 129] FixtureHelper-product
+/private/var/folders/33/dhlmtmrx3_gfs18qtv9drgsh0000gn/T/niuma-manual-qa-os8bg_sf/package/Package.swift: FixtureHelper-product: ld: warning: search path '/Library/Developer/CommandLineTools/Developer/usr/lib' not found
+/private/var/folders/33/dhlmtmrx3_gfs18qtv9drgsh0000gn/T/niuma-manual-qa-os8bg_sf/package/Package.swift: FixtureHelper-product: ld: warning: search path '/Library/Developer/CommandLineTools/Developer/Library/Frameworks' not found
+Build complete! (20.55秒)
+PASS: 手动打开新版 -> 退出旧进程 -> 归位覆盖 -> 新版启动 -> 回收旧包及下载副本。
+PASS: 新版启动失败，恢复并重启旧版，保留下载源。
+PASS: 两种真实进程场景中工资及排班配置均保持原样。

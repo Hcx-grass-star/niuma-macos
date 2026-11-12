@@ -1,0 +1,40 @@
+Building for production...
+[3 / 11] NiumaCore
+[4 / 12] NiumaCore
+[9 / 16] NiumaInstallation
+[10 / 17] NiumaInstallation
+Build complete! (2.60秒)
+PID: 76096
+测试配置：/var/folders/33/dhlmtmrx3_gfs18qtv9drgsh0000gn/T/niuma-ui-12C3DC77-7C4F-4B74-B9D1-0DFBC3CAC029；更新偏好：niuma-ui-D26CD4CF-0340-454C-A876-BD1835F49AD5
+sandbox_extension_issue_file_to_process failed for /var/folders/33/dhlmtmrx3_gfs18qtv9drgsh0000gn/T//niuma-ui-check.QQYrlX/MemoryProbe.app: 1 (Operation not permitted)
+before status action: active=false
+regression-idle: 16.81 MB; lifetime peak 16.86 MB
+event tick=3 NSWindowDidBecomeKeyNotification object=IncomePanel active=true panelVisible=true panelKey=true front=com.dancesuite.dance.ka.sasysa542.mac frontPID=1478 mouseAge=1.821466583 keyAge=19.321466625
+after status action: active=true visible=true key=true hides=false
+regression-panel: 35.54 MB; lifetime peak 35.69 MB
+regression-panel: interval 2.00 s; CPU 0.2102%
+event tick=5 NSWindowWillCloseNotification object=IncomePanel active=true panelVisible=true panelKey=true front=com.dancesuite.dance.ka.sasysa542.mac frontPID=1478 mouseAge=3.800619833 keyAge=21.300619875
+event tick=5 NSWindowDidResignKeyNotification object=IncomePanel active=false panelVisible=false panelKey=false front=com.dancesuite.dance.ka.sasysa542.mac frontPID=1478 mouseAge=3.806233541 keyAge=21.306233583
+event tick=7 NSWindowDidBecomeKeyNotification object=IncomePanel active=true panelVisible=true panelKey=true front=com.dancesuite.dance.ka.sasysa542.mac frontPID=1478 mouseAge=0.780614625 keyAge=23.280614666
+event tick=9 NSWindowDidResignKeyNotification object=IncomePanel active=false panelVisible=true panelKey=false front=com.dancesuite.dance.ka.sasysa542.mac frontPID=1478 mouseAge=2.966273291 keyAge=25.466273416
+event tick=9 NSWindowWillCloseNotification object=IncomePanel active=false panelVisible=true panelKey=false front=com.dancesuite.dance.ka.sasysa542.mac frontPID=1478 mouseAge=2.966787375 keyAge=25.466787416
+event tick=9 NSWindowDidBecomeKeyNotification object=NSWindow active=false panelVisible=false panelKey=false front=com.dancesuite.dance.ka.sasysa542.mac frontPID=1478 mouseAge=2.971226208 keyAge=25.47122625
+event tick=9 NSWindowWillCloseNotification object=NSWindow active=false panelVisible=false panelKey=false front=com.dancesuite.dance.ka.sasysa542.mac frontPID=1478 mouseAge=2.977420916 keyAge=25.477421333
+event tick=9 NSWindowDidResignKeyNotification object=NSWindow active=false panelVisible=false panelKey=false front=com.dancesuite.dance.ka.sasysa542.mac frontPID=1478 mouseAge=2.978092708 keyAge=25.47809275
+event tick=9 NSWindowDidBecomeKeyNotification object=IncomePanel active=true panelVisible=true panelKey=true front=com.dancesuite.dance.ka.sasysa542.mac frontPID=1478 mouseAge=3.009975458 keyAge=25.509975458
+event tick=9 NSWindowWillCloseNotification object=IncomePanel active=true panelVisible=true panelKey=true front=com.dancesuite.dance.ka.sasysa542.mac frontPID=1478 mouseAge=3.021243291 keyAge=25.521243291
+event tick=9 NSWindowDidResignKeyNotification object=IncomePanel active=false panelVisible=false panelKey=false front=com.dancesuite.dance.ka.sasysa542.mac frontPID=1478 mouseAge=3.024929041 keyAge=25.524929083
+event tick=9 NSWindowDidBecomeKeyNotification object=IncomePanel active=true panelVisible=true panelKey=true front=com.dancesuite.dance.ka.sasysa542.mac frontPID=1478 mouseAge=3.049932458 keyAge=25.549932583
+event tick=9 NSWindowWillCloseNotification object=IncomePanel active=true panelVisible=true panelKey=true front=com.dancesuite.dance.ka.sasysa542.mac frontPID=1478 mouseAge=3.058260041 keyAge=25.558260041
+event tick=9 NSWindowDidResignKeyNotification object=IncomePanel active=false panelVisible=false panelKey=false front=com.dancesuite.dance.ka.sasysa542.mac frontPID=1478 mouseAge=3.063522333 keyAge=25.563522458
+event tick=9 NSWindowDidBecomeKeyNotification object=NSWindow active=true panelVisible=false panelKey=false front=com.hcxgrassstar.niuma.ui-check frontPID=76096 mouseAge=3.202287666 keyAge=25.70228775
+event tick=9 NSApplicationDidBecomeActiveNotification object=NSApplication active=true panelVisible=false panelKey=false front=com.hcxgrassstar.niuma.ui-check frontPID=76096 mouseAge=3.205665083 keyAge=25.705665125
+event tick=9 NSWindowWillCloseNotification object=TUINSWindow active=true panelVisible=false panelKey=false front=com.hcxgrassstar.niuma.ui-check frontPID=76096 mouseAge=3.265664416 keyAge=25.7656645
+regression-settings: 65.26 MB; lifetime peak 92.72 MB
+regression-settings: interval 7.00 s; CPU 0.2013%
+event tick=12 NSWindowWillCloseNotification object=NSWindow active=true panelVisible=false panelKey=false front=com.hcxgrassstar.niuma.ui-check frontPID=76096 mouseAge=5.74258125 keyAge=28.2425815
+event tick=12 NSWindowDidResignKeyNotification object=NSWindow active=true panelVisible=false panelKey=false front=com.hcxgrassstar.niuma.ui-check frontPID=76096 mouseAge=5.74999275 keyAge=28.249992833
+event tick=14 NSApplicationDidResignActiveNotification object=NSApplication active=false panelVisible=false panelKey=false front=com.openai.codex frontPID=29124 mouseAge=8.377763625 keyAge=30.877763625
+regression-after-close: 54.97 MB; lifetime peak 92.72 MB
+regression-after-close: interval 3.00 s; CPU 0.0593%
+PASS: 后台状态栏动作、重复切换、深浅色圆角像素、隐私切换、AppKit失焦通知、Esc处理及面板设置入口

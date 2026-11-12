@@ -82,9 +82,10 @@ $([ "$mode" = "adhoc" ] && printf '%s\n' "为什么要多这一步
 
 使用与卸载
   · 菜单栏图标即入口；快捷键 ⌘I 查看收入、⌘, 打开设置、⌘Q 退出。
-  · 工资与作息、倒计时分别保存在本机文件：
+  · 工资与作息、倒计时、愿望与打气开关分别保存在本机文件：
       ~/Library/Application Support/com.hcxgrassstar.niuma/settings.json
       ~/Library/Application Support/com.hcxgrassstar.niuma/countdowns.json
+      ~/Library/Application Support/com.hcxgrassstar.niuma/cheer.json
   · 卸载：先在设置里关闭「登录时启动」，退出应用，再删除 .app。
     若想彻底清除，请先点「清除设置并重置」，再删除 .app。
 EOF

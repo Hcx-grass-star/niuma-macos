@@ -1,0 +1,37 @@
+Building for production...
+[1 / 4]
+Build complete! (0.21秒)
+PID: 73899
+测试配置：/var/folders/33/dhlmtmrx3_gfs18qtv9drgsh0000gn/T/niuma-ui-A8657583-8186-4D89-A43F-CA4A99CFA3DD；更新偏好：niuma-ui-168EA916-E2C1-4AB1-B81B-2A72B93A2D73
+sandbox_extension_issue_file_to_process failed for /var/folders/33/dhlmtmrx3_gfs18qtv9drgsh0000gn/T//niuma-ui-check.PKrKoM/MemoryProbe.app: 1 (Operation not permitted)
+before status action: active=false
+regression-idle: 16.58 MB; lifetime peak 16.65 MB
+event tick=3 NSWindowDidBecomeKeyNotification object=IncomePanel active=true panelVisible=true panelKey=true front=com.openai.codex frontPID=29124 mouseAge=1.916824166 keyAge=16.41682425
+after status action: active=true visible=true key=true hides=false
+regression-panel: 37.85 MB; lifetime peak 38.01 MB
+regression-panel: interval 2.00 s; CPU 0.2759%
+event tick=5 NSWindowWillCloseNotification object=IncomePanel active=true panelVisible=true panelKey=true front=com.openai.codex frontPID=29124 mouseAge=3.885756833 keyAge=18.385757
+event tick=5 NSWindowDidResignKeyNotification object=IncomePanel active=false panelVisible=false panelKey=false front=com.openai.codex frontPID=29124 mouseAge=3.893465208 keyAge=18.39346525
+event tick=7 NSWindowDidBecomeKeyNotification object=IncomePanel active=true panelVisible=true panelKey=true front=com.openai.codex frontPID=29124 mouseAge=5.900398125 keyAge=20.400398208
+event tick=9 NSWindowDidResignKeyNotification object=IncomePanel active=false panelVisible=true panelKey=false front=com.openai.codex frontPID=29124 mouseAge=8.059147625 keyAge=22.55914775
+event tick=9 NSWindowWillCloseNotification object=IncomePanel active=false panelVisible=true panelKey=false front=com.openai.codex frontPID=29124 mouseAge=8.059619208 keyAge=22.559619208
+event tick=9 NSWindowDidBecomeKeyNotification object=NSWindow active=false panelVisible=false panelKey=false front=com.openai.codex frontPID=29124 mouseAge=8.064330416 keyAge=22.564330458
+event tick=9 NSWindowWillCloseNotification object=NSWindow active=false panelVisible=false panelKey=false front=com.openai.codex frontPID=29124 mouseAge=8.070239708 keyAge=22.570239916
+event tick=9 NSWindowDidResignKeyNotification object=NSWindow active=false panelVisible=false panelKey=false front=com.openai.codex frontPID=29124 mouseAge=8.07154175 keyAge=22.571541791
+event tick=9 NSWindowDidBecomeKeyNotification object=IncomePanel active=true panelVisible=true panelKey=true front=com.openai.codex frontPID=29124 mouseAge=8.101460375 keyAge=22.6014605
+event tick=9 NSWindowWillCloseNotification object=IncomePanel active=true panelVisible=true panelKey=true front=com.openai.codex frontPID=29124 mouseAge=8.113267541 keyAge=22.613267541
+event tick=9 NSWindowDidResignKeyNotification object=IncomePanel active=false panelVisible=false panelKey=false front=com.openai.codex frontPID=29124 mouseAge=8.117338125 keyAge=22.617338166
+event tick=9 NSWindowDidBecomeKeyNotification object=IncomePanel active=true panelVisible=true panelKey=true front=com.openai.codex frontPID=29124 mouseAge=8.146552541 keyAge=22.646552708
+event tick=9 NSWindowWillCloseNotification object=IncomePanel active=true panelVisible=true panelKey=true front=com.openai.codex frontPID=29124 mouseAge=8.155383333 keyAge=22.655383333
+event tick=9 NSWindowDidResignKeyNotification object=IncomePanel active=false panelVisible=false panelKey=false front=com.openai.codex frontPID=29124 mouseAge=8.159261041 keyAge=22.659261083
+event tick=9 NSWindowDidBecomeKeyNotification object=NSWindow active=true panelVisible=false panelKey=false front=com.hcxgrassstar.niuma.ui-check frontPID=73899 mouseAge=8.302382791 keyAge=22.802382875
+event tick=9 NSApplicationDidBecomeActiveNotification object=NSApplication active=true panelVisible=false panelKey=false front=com.hcxgrassstar.niuma.ui-check frontPID=73899 mouseAge=8.305444416 keyAge=22.805444458
+event tick=9 NSWindowWillCloseNotification object=TUINSWindow active=true panelVisible=false panelKey=false front=com.hcxgrassstar.niuma.ui-check frontPID=73899 mouseAge=8.356264833 keyAge=22.856264833
+event tick=9 NSWindowDidResignKeyNotification object=NSWindow active=false panelVisible=false panelKey=false front=com.openai.codex frontPID=29124 mouseAge=8.37665275 keyAge=22.876652875
+event tick=9 NSApplicationDidResignActiveNotification object=NSApplication active=false panelVisible=false panelKey=false front=com.openai.codex frontPID=29124 mouseAge=8.377921416 keyAge=22.877921458
+regression-settings: 65.39 MB; lifetime peak 94.08 MB
+regression-settings: interval 7.00 s; CPU 0.1951%
+event tick=12 NSWindowWillCloseNotification object=NSWindow active=false panelVisible=false panelKey=false front=com.openai.codex frontPID=29124 mouseAge=0.846998083 keyAge=25.346998208
+regression-after-close: 55.62 MB; lifetime peak 94.08 MB
+regression-after-close: interval 3.00 s; CPU 0.0343%
+PASS: 后台状态栏动作、重复切换、深浅色圆角像素、隐私切换、AppKit失焦通知、Esc处理及面板设置入口

@@ -29,7 +29,8 @@ struct SalaryFlowIntegrationTests {
             ("面板外观持久化与旧配置兼容", suite.testPanelAppearance),
             ("复用引擎后的配置变更", suite.testReusableEngine),
             ("包环境识别及自启动准入", BuildChannelIntegrationTests.run),
-            ("工作提醒边界", WorkReminderIntegrationTests.run)
+            ("工作提醒边界", WorkReminderIntegrationTests.run),
+            ("上班打气计薪、战报与愿望持久化", CheerIntegrationTests.run)
         ]
         var failures = 0
         for (name, run) in cases {
