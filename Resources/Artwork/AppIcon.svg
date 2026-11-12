@@ -1,6 +1,57 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 256 256" role="img" aria-label="牛马上班 · 微笑小牛"><rect x="8" y="8" width="240" height="240" rx="54" fill="#4d705b"/><path d="M88 88C72 80 65 63 73 47C79 64 89 68 104 72Z" fill="#f8f6e9"/><path d="M168 88C184 80 191 63 183 47C177 64 167 68 152 72Z" fill="#f8f6e9"/>
-<path d="M87 102C69 80 48 83 45 101C44 115 63 124 83 118Z" fill="#f8f6e9"/><path d="M169 102C187 80 208 83 211 101C212 115 193 124 173 118Z" fill="#f8f6e9"/>
-<path d="M81 100C81 77 101 69 128 69C155 69 175 77 175 100V148C175 178 159 193 128 193C97 193 81 178 81 148Z" fill="#f8f6e9"/>
-<ellipse cx="128" cy="158" rx="43" ry="29" fill="#dce5cf"/><circle cx="108" cy="116" r="5" fill="#243c32"/><circle cx="148" cy="116" r="5" fill="#243c32"/>
-<ellipse cx="113" cy="151" rx="3.5" ry="4.5" fill="#243c32"/><ellipse cx="143" cy="151" rx="3.5" ry="4.5" fill="#243c32"/>
-<path d="M115 166Q128 177 141 166" fill="none" stroke="#243c32" stroke-width="4.5" stroke-linecap="round"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-label="奶油小牛应用图标设计稿">
+  <defs>
+    <linearGradient id="tile" x1="160" y1="60" x2="870" y2="1000" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F4EDE3"/><stop offset="1" stop-color="#DFD0BD"/>
+    </linearGradient>
+    <linearGradient id="cream" x1="400" y1="290" x2="620" y2="750" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFCF3"/><stop offset=".55" stop-color="#F9F2E1"/><stop offset="1" stop-color="#EBDDC1"/>
+    </linearGradient>
+    <linearGradient id="ear" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#F7EFDB"/><stop offset="1" stop-color="#D9C6A3"/>
+    </linearGradient>
+    <linearGradient id="horn" x1="0" y1="0" x2=".4" y2="1">
+      <stop stop-color="#D9BB8D"/><stop offset="1" stop-color="#AD8758"/>
+    </linearGradient>
+    <linearGradient id="cocoa" x1="315" y1="330" x2="467" y2="546" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#80624D"/><stop offset="1" stop-color="#5C4437"/>
+    </linearGradient>
+    <linearGradient id="muzzle" x1="480" y1="555" x2="540" y2="740" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#EAD3AE"/><stop offset="1" stop-color="#D5B58A"/>
+    </linearGradient>
+    <radialGradient id="light" cx=".3" cy=".14" r=".85">
+      <stop stop-color="#FFFFFF" stop-opacity=".46"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="shadow" x="-.3" y="-.3" width="1.6" height="1.7" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="23" stdDeviation="20" flood-color="#796047" flood-opacity=".18"/>
+    </filter>
+    <clipPath id="face-clip"><path d="M512 293C367 293 268 365 268 500V540C268 687 355 757 512 757C669 757 756 687 756 540V500C756 365 657 293 512 293Z"/></clipPath>
+  </defs>
+  <!-- 大面积留白和柔和明暗让轮廓在 Dock 缩略尺寸仍然清楚。 -->
+  <rect x="40" y="40" width="944" height="944" rx="216" fill="url(#tile)"/>
+  <rect x="41" y="41" width="942" height="942" rx="215" fill="url(#light)" stroke="#FFFFFF" stroke-opacity=".5" stroke-width="2"/>
+  <g filter="url(#shadow)">
+    <!-- 短角收在头顶，避免长尖角改变短圆脸的比例。 -->
+    <path d="M350 339C321 314 317 274 333 248C340 238 352 241 354 253C358 276 373 288 398 296L395 344Z" fill="url(#horn)"/>
+    <path d="M674 339C703 314 707 274 691 248C684 238 672 241 670 253C666 276 651 288 626 296L629 344Z" fill="url(#horn)"/>
+    <path d="M309 420C279 377 220 355 170 369C154 373 149 385 155 403C174 465 234 489 294 462Z" fill="url(#ear)"/>
+    <path d="M715 420C745 377 804 355 854 369C870 373 875 385 869 403C850 465 790 489 730 462Z" fill="url(#ear)"/>
+    <path d="M274 430C249 404 217 394 190 397C204 427 230 443 267 443Z" fill="#B99675" opacity=".6"/>
+    <path d="M750 430C775 404 807 394 834 397C820 427 794 443 757 443Z" fill="#B99675" opacity=".6"/>
+    <path d="M512 293C367 293 268 365 268 500V540C268 687 355 757 512 757C669 757 756 687 756 540V500C756 365 657 293 512 293Z" fill="url(#cream)"/>
+    <!-- 一块可可色奶牛斑保持角色辨识，避免堆叠装饰。 -->
+    <g clip-path="url(#face-clip)">
+      <path d="M290 327C334 295 406 292 441 321C472 347 445 382 460 414C480 458 452 504 416 522C370 546 309 529 285 485C263 445 259 372 290 327Z" fill="url(#cocoa)"/>
+    </g>
+    <path d="M479 318C485 302 499 293 512 293C508 311 518 324 536 331C513 340 494 335 479 318Z" fill="#FFFCF3"/>
+    <!-- 小眼睛和轻微上扬的嘴角保留自然、放松的表情。 -->
+    <ellipse cx="403" cy="488" rx="18" ry="23" fill="#2D261F"/>
+    <ellipse cx="621" cy="488" rx="18" ry="23" fill="#2D261F"/>
+    <ellipse cx="398" cy="480" rx="5" ry="6" fill="#FFFFFF" opacity=".9"/>
+    <ellipse cx="616" cy="480" rx="5" ry="6" fill="#FFFFFF" opacity=".9"/>
+    <path d="M512 553C409 553 341 582 341 639C341 701 408 731 512 731C616 731 683 701 683 639C683 582 615 553 512 553Z" fill="url(#muzzle)"/>
+    <path d="M384 595C414 576 454 570 486 571" fill="none" stroke="#FFF5DF" stroke-opacity=".48" stroke-width="8" stroke-linecap="round"/>
+    <ellipse cx="452" cy="630" rx="10" ry="13" transform="rotate(-18 452 630)" fill="#866749"/>
+    <ellipse cx="572" cy="630" rx="10" ry="13" transform="rotate(18 572 630)" fill="#866749"/>
+    <path d="M486 678Q512 696 538 678" fill="none" stroke="#806147" stroke-width="8" stroke-linecap="round"/>
+  </g>
+</svg>

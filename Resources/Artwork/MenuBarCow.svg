@@ -1,3 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="32 32 192 192" color="#000"><path d="M88 88C72 80 65 63 73 47C79 64 89 68 104 72Z M168 88C184 80 191 63 183 47C177 64 167 68 152 72Z" fill="currentColor"/>
-<path d="M86 102C67 80 45 84 45 102C45 116 62 123 81 118V148C81 178 97 193 128 193C159 193 175 178 175 148V118C194 123 211 116 211 102C211 84 189 80 170 102C170 79 153 71 128 71C103 71 86 79 86 102Z M101 151A27 21 0 1 1 155 151A27 21 0 1 1 101 151Z" fill="currentColor" fill-rule="evenodd"/>
-<circle cx="116" cy="151" r="4" fill="currentColor"/><circle cx="140" cy="151" r="4" fill="currentColor"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 36 36" role="img" aria-label="短圆脸小牛菜单栏模板设计稿">
+  <!-- 模板只包含黑色与透明；扩大五官镂空以适配 18 点显示。 -->
+  <g fill="none" stroke="#000" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 10C10.5 8.5 10.5 6.5 11.2 5.2M24 10C25.5 8.5 25.5 6.5 24.8 5.2"/>
+    <path d="M8.3 14C6.6 12.3 4.2 12 2.5 12.7C3 15.3 4.9 17 7.8 16.7M27.7 14C29.4 12.3 31.8 12 33.5 12.7C33 15.3 31.1 17 28.2 16.7"/>
+    <path d="M18 9.3C11.2 9.3 7.7 13 7.7 19.1C7.7 26.3 11.4 29.3 18 29.3C24.6 29.3 28.3 26.3 28.3 19.1C28.3 13 24.8 9.3 18 9.3Z"/>
+    <path d="M12.2 24.2C14.4 26.2 21.6 26.2 23.8 24.2" stroke-width="1.8"/>
+  </g>
+  <circle cx="13.3" cy="17.9" r="1.3"/><circle cx="22.7" cy="17.9" r="1.3"/>
+  <ellipse cx="15" cy="23" rx=".9" ry="1.1"/><ellipse cx="21" cy="23" rx=".9" ry="1.1"/>
+</svg>
