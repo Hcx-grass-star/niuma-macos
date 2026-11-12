@@ -1,21 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
-<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle"><channel><title>牛马上班</title><link>https://github.com/Hcx-grass-star/niuma-macos/releases/tag/v0.3.6</link><item><title>0.3.6</title><description sparkle:format="plain-text"><![CDATA[# 牛马上班 0.3.6
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle"><channel><title>牛马上班</title><link>https://github.com/Hcx-grass-star/niuma-macos/releases/tag/v0.4.0</link><item><title>0.4.0</title><description sparkle:format="plain-text"><![CDATA[# 牛马上班 0.4.0
+
+本次更新适用于原生 macOS 版。Windows/Tauri 尚未移植以下打气功能，Windows 继续使用 0.3.6，本次不提供 Windows 安装包。
 
 ## 更新内容
 
-- 固定日期倒计时到期后自动删除，重新打开应用也会清理已过期的启用项。支持原生 macOS 和 Tauri 共用前端。
-- 已完成主倒计时删除后自动选择剩余事件；全部完成时收起倒计时区域。关闭的记录保留，循环下班继续寻找下一班。
-- 隐藏面板时只等待最近到期目标，不新增逐秒后台轮询；删除失败时保留原配置并提示。
-- 原生 macOS 新增上班、非计薪休息开始/结束及下班提醒，默认关闭，保存开启后请求系统通知权限；通知不包含工资金额。
-- 原生收入面板优化上班前、休息和下班后的状态文案。
+- 新增摸鱼战报：主动开启后，离开满两分钟且有计薪收入，返回即可查看这段时间的预估收入；午休等非计薪时段自动排除，系统提醒不显示金额。
+- 新增愿望清单：最多三个小目标，支持已有金额、进度、编辑和删除确认；跨年继续累计，调薪按生效区间结算。
+- 新增动态木鱼：手动、空格和自动敲击共用木槌落下、鱼身轻震、功德浮字和回弹动画；自动模式只在工作中展开木鱼页时运行，音效默认关闭。
+- 更新小牛应用图标、菜单栏图标及木鱼图稿；首页按原型恢复横向愿望摘要与双列浅绿卡片，导航、文字和进度使用统一配色。
+- 愿望等收入摘要遵循金额隐藏开关；移除愿望页底部冗长说明。
+- 修复日薪设置首次预览初始化崩溃，以及切页后面板内容尺寸不同步导致的裁切。
 
-## 验证与交付范围
+## 验证与范围
 
-- 收入、倒计时、配置保存重载和更新源 HTTP 集成验证通过。
-- AppKit 到期删除、菜单栏回退、旧配置兼容、面板和设置交互检查通过。通用 UI 首次运行在再次打开面板处失败，带焦点诊断复跑通过；不将单次通过作为长期稳定性证明。
-- 浏览器验证了 Tauri 共用前端到期删除、刷新后不恢复、存储失败提示与恢复路径。
-- macOS 提供 arm64 / x86_64 通用包，沿用 ad-hoc 签名，未进行 Apple Developer ID 公证。
-- Windows 安装器由对应源码的 GitHub Actions 构建；Windows/Intel/旧版 macOS 真机、真实通知权限与长时运行尚未完成验收。
+- 收入、倒计时、愿望持久化、调薪及更新源 HTTP 集成检查通过。
+- 原生四页跳转、愿望管理、隐私、动态木鱼与自动暂停、深浅色外观、玻璃材质和设置保存回读检查通过。
+- 隔离真实进程验证了手动升级、启动失败回滚、Sparkle 自动升级、签名篡改拒绝以及配置保留。
+- 后台焦点回归早期有失败，完整流程随后连续两轮通过；外观测试记录到其他应用取得前台，已改为在保存返回后立即验收，保留原有焦点与材质断言。未修改产品的失焦收起策略，不将本次通过作为长时稳定性保证。
+- 提供 Apple Silicon / Intel 通用 macOS 包，最低 macOS 13。沿用 ad-hoc 签名，未进行 Apple Developer ID 公证。
+- Intel/旧版 macOS 真机、真实锁屏及系统通知交付、登录启动、音效听验与长时间运行仍未完成实机验收。
 
-源码归档分支：`release/0.3.6`；发布标签：`v0.3.6`；原生构建号：`10`。
-]]></description><pubDate>Tue, 10 Nov 2026 06:01:47 GMT</pubDate><sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion><enclosure url="https://github.com/Hcx-grass-star/niuma-macos/releases/download/v0.3.6/niuma-0.3.6-macOS-universal.zip" sparkle:version="10" sparkle:shortVersionString="0.3.6" length="3990578" type="application/octet-stream" sparkle:edSignature="E20yo3X0FrK/i7J7K6K6LqRKZbEge7c8NkWuv4bgVYJMdpNphBX1QTMGyOlcfA3pqz43NALQ4RgeBA+Ve295CQ=="/></item></channel></rss>
+源码归档分支：`release/0.4.0`；发布标签：`v0.4.0`；原生构建号：`11`。
+]]></description><pubDate>Thu, 12 Nov 2026 06:44:34 GMT</pubDate><sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion><enclosure url="https://github.com/Hcx-grass-star/niuma-macos/releases/download/v0.4.0/niuma-0.4.0-macOS-universal.zip" sparkle:version="11" sparkle:shortVersionString="0.4.0" length="2781011" type="application/octet-stream" sparkle:edSignature="xkKeNMlF1BFVKduD322g6msq4yR8krts0V3jBAY9kXRko1a+Ck5xWrm2WelxXOM9KsQHV7syg1IjnNpPpz6aBg=="/></item></channel></rss>
