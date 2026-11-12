@@ -1,6 +1,6 @@
 {
-  "version": "0.4.0",
-  "notes": "# 牛马上班 0.4.0\n\n本次更新适用于原生 macOS 版。Windows/Tauri 尚未移植以下打气功能，Windows 继续使用 0.3.6，本次不提供 Windows 安装包。\n\n## 更新内容\n\n- 新增摸鱼战报：主动开启后，离开满两分钟且有计薪收入，返回即可查看这段时间的预估收入；午休等非计薪时段自动排除，系统提醒不显示金额。\n- 新增愿望清单：最多三个小目标，支持已有金额、进度、编辑和删除确认；跨年继续累计，调薪按生效区间结算。\n- 新增动态木鱼：手动、空格和自动敲击共用木槌落下、鱼身轻震、功德浮字和回弹动画；自动模式只在工作中展开木鱼页时运行，音效默认关闭。\n- 更新小牛应用图标、菜单栏图标及木鱼图稿；首页按原型恢复横向愿望摘要与双列浅绿卡片，导航、文字和进度使用统一配色。\n- 愿望等收入摘要遵循金额隐藏开关；移除愿望页底部冗长说明。\n- 修复日薪设置首次预览初始化崩溃，以及切页后面板内容尺寸不同步导致的裁切。\n\n## 验证与范围\n\n- 收入、倒计时、愿望持久化、调薪及更新源 HTTP 集成检查通过。\n- 原生四页跳转、愿望管理、隐私、动态木鱼与自动暂停、深浅色外观、玻璃材质和设置保存回读检查通过。\n- 隔离真实进程验证了手动升级、启动失败回滚、Sparkle 自动升级、签名篡改拒绝以及配置保留。\n- 后台焦点回归早期有失败，完整流程随后连续两轮通过；外观测试记录到其他应用取得前台，已改为在保存返回后立即验收，保留原有焦点与材质断言。未修改产品的失焦收起策略，不将本次通过作为长时稳定性保证。\n- 提供 Apple Silicon / Intel 通用 macOS 包，最低 macOS 13。沿用 ad-hoc 签名，未进行 Apple Developer ID 公证。\n- Intel/旧版 macOS 真机、真实锁屏及系统通知交付、登录启动、音效听验与长时间运行仍未完成实机验收。\n\n源码归档分支：`release/0.4.0`；发布标签：`v0.4.0`；原生构建号：`11`。\n",
-  "url": "https://github.com/Hcx-grass-star/niuma-macos/releases/tag/v0.4.0",
-  "macos": "https://github.com/Hcx-grass-star/niuma-macos/releases/download/v0.4.0/niuma-0.4.0-macOS-universal.zip"
+  "version": "0.4.1",
+  "notes": "更新原生 macOS 版的应用与菜单栏图标。\n\n- 应用图标改为奶油色短圆脸小牛，搭配小牛角、可可色斑纹与自然微笑。\n- 菜单栏采用简洁的单色线条小牛，支持系统深浅色外观。\n- 同步更新应用内图标与全部标准、Retina 图标尺寸。\n\n支持 macOS 13 及以上，安装包兼容 Apple Silicon 与 Intel。已有工资、作息、倒计时和愿望配置可继续使用。\n\n本次提供原生 macOS 通用 ZIP，包含安装说明及公开更新签名。分发包采用临时签名，尚未经过 Apple 公证；首次打开请参照包内安装说明。\n",
+  "url": "https://github.com/Hcx-grass-star/niuma-macos/releases/tag/v0.4.1",
+  "macos": "https://github.com/Hcx-grass-star/niuma-macos/releases/download/v0.4.1/niuma-0.4.1-macOS-universal.zip"
 }
