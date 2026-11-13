@@ -1,6 +1,7 @@
 {
-  "version": "0.4.1",
-  "notes": "更新原生 macOS 版的应用与菜单栏图标。\n\n- 应用图标改为奶油色短圆脸小牛，搭配小牛角、可可色斑纹与自然微笑。\n- 菜单栏采用简洁的单色线条小牛，支持系统深浅色外观。\n- 同步更新应用内图标与全部标准、Retina 图标尺寸。\n\n支持 macOS 13 及以上，安装包兼容 Apple Silicon 与 Intel。已有工资、作息、倒计时和愿望配置可继续使用。\n\n本次提供原生 macOS 通用 ZIP，包含安装说明及公开更新签名。分发包采用临时签名，尚未经过 Apple 公证；首次打开请参照包内安装说明。\n",
-  "url": "https://github.com/Hcx-grass-star/niuma-macos/releases/tag/v0.4.1",
-  "macos": "https://github.com/Hcx-grass-star/niuma-macos/releases/download/v0.4.1/niuma-0.4.1-macOS-universal.zip"
+  "version": "0.4.2",
+  "notes": "# 牛马上班 0.4.2\n\n本次版本将 macOS 已有的上班打气功能同步到 Windows/Tauri，并保留上一版本的奶油小牛图标和收入、倒计时、桌面宠物、更新能力。\n\n## 更新内容\n\n- Windows/Tauri 新增收入、战报、愿望、木鱼四页导航。\n- 新增战报、愿望累计、隐私遮罩、手动/自动木鱼和会话功德。\n- 新增工作节点提醒、浅色/深色主题、面板染色和设置重置。\n- 战报和愿望累计复用共享区间计薪核心，自动扣除非计薪休息。\n\n## 验证与范围\n\n- `npm run test:core` 通过。\n- `npm run test:updates` 通过，包含 18 组收入集成与更新检查。\n- 本地浏览器交互验证通过：工资保存、四页切换、愿望新增、金额隐藏、木鱼点击和外观保存。\n- Windows 10/11 真机上的 WebView2、托盘、通知、自动启动、NSIS/MSI 安装升级仍需平台验收。\n\n源码归档分支：`release/0.4.2`；发布标签：`v0.4.2`。\n",
+  "url": "https://github.com/Hcx-grass-star/niuma-macos/releases/tag/v0.4.2",
+  "macos": "https://github.com/Hcx-grass-star/niuma-macos/releases/download/v0.4.2/niuma-0.4.2-macOS-universal.zip",
+  "windows": "https://github.com/Hcx-grass-star/niuma-macos/releases/download/v0.4.2/niuma-0.4.2-windows-x64-setup.exe"
 }

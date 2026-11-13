@@ -1,19 +1,19 @@
 {
-  "version": "0.3.6",
-  "notes": "# 牛马上班 0.3.6\n\n## 更新内容\n\n- 固定日期倒计时到期后自动删除，重新打开应用也会清理已过期的启用项。支持原生 macOS 和 Tauri 共用前端。\n- 已完成主倒计时删除后自动选择剩余事件；全部完成时收起倒计时区域。关闭的记录保留，循环下班继续寻找下一班。\n- 隐藏面板时只等待最近到期目标，不新增逐秒后台轮询；删除失败时保留原配置并提示。\n- 原生 macOS 新增上班、非计薪休息开始/结束及下班提醒，默认关闭，保存开启后请求系统通知权限；通知不包含工资金额。\n- 原生收入面板优化上班前、休息和下班后的状态文案。\n\n## 验证与交付范围\n\n- 收入、倒计时、配置保存重载和更新源 HTTP 集成验证通过。\n- AppKit 到期删除、菜单栏回退、旧配置兼容、面板和设置交互检查通过。通用 UI 首次运行在再次打开面板处失败，带焦点诊断复跑通过；不将单次通过作为长期稳定性证明。\n- 浏览器验证了 Tauri 共用前端到期删除、刷新后不恢复、存储失败提示与恢复路径。\n- macOS 提供 arm64 / x86_64 通用包，沿用 ad-hoc 签名，未进行 Apple Developer ID 公证。\n- Windows 安装器由对应源码的 GitHub Actions 构建；Windows/Intel/旧版 macOS 真机、真实通知权限与长时运行尚未完成验收。\n\n源码归档分支：`release/0.3.6`；发布标签：`v0.3.6`；原生构建号：`10`。\n",
-  "pub_date": "2026-11-10T06:01:47Z",
+  "version": "0.4.2",
+  "notes": "# 牛马上班 0.4.2\n\n本次版本将 macOS 已有的上班打气功能同步到 Windows/Tauri，并保留上一版本的奶油小牛图标和收入、倒计时、桌面宠物、更新能力。\n\n## 更新内容\n\n- Windows/Tauri 新增收入、战报、愿望、木鱼四页导航。\n- 新增战报、愿望累计、隐私遮罩、手动/自动木鱼和会话功德。\n- 新增工作节点提醒、浅色/深色主题、面板染色和设置重置。\n- 战报和愿望累计复用共享区间计薪核心，自动扣除非计薪休息。\n\n## 验证与范围\n\n- `npm run test:core` 通过。\n- `npm run test:updates` 通过，包含 18 组收入集成与更新检查。\n- 本地浏览器交互验证通过：工资保存、四页切换、愿望新增、金额隐藏、木鱼点击和外观保存。\n- Windows 10/11 真机上的 WebView2、托盘、通知、自动启动、NSIS/MSI 安装升级仍需平台验收。\n\n源码归档分支：`release/0.4.2`；发布标签：`v0.4.2`。\n",
+  "pub_date": "2026-11-13T10:19:24Z",
   "platforms": {
     "windows-x86_64-nsis": {
-      "url": "https://github.com/Hcx-grass-star/niuma-macos/releases/download/v0.3.6/niuma-0.3.6-windows-x64-setup.exe",
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVScXN2Qm9wZG9oSURrWHI3Nm5raWhpWGdFL0lVeGZtUFNOeC9teHRMc2dwZlo5cWRtYXhXd1dqR1ZhbmpoWWtvaW1KYmM4T0c4VzB6R2w3QTZQcHZ1VXJFOWVtQ0ZOL3c0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0MjkwNDc5CWZpbGU6bml1bWEtMC4zLjYtd2luZG93cy14NjQtc2V0dXAuZXhlCXZlcnNpb246MC4zLjYKZHpUS0liV0dub012NjFhcWhSUEJydWJpT3NHeEVCL0VBdXJoSXBZTndUS3BPZW81Qk5BbERqZFpBbndyK29DVFVNZEVadmhqK0dlWWNkcDNSdzU0Q0E9PQo="
+      "url": "https://github.com/Hcx-grass-star/niuma-macos/releases/download/v0.4.2/niuma-0.4.2-windows-x64-setup.exe",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVScXN2Qm9wZG9oSUozSXI5R2xIcEJ6akxoT29DU3JiNC9rTzdIZ0M1SVg3YnE5MkNZWkZaaVg5R3F4NFRVaGdaUU5LWnpsaUxncXRtVVMxOGxXM2JTM2pjYjBFUEd1N0EwPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NTY0ODk5CWZpbGU654mb6ams5LiK54+tXzAuNC4yX3g2NC1zZXR1cC5leGUJdmVyc2lvbjowLjQuMgpjK0hzV2JXM2JoZDRzTVdKQVlPOFMvTkZJemxjWnJnWHYrU3ZuR2Q5TEUxRENRN3phMExZNTdRcnVtT09FeTFoZlN5eVUzSmR3Vk1BYlpoZXpxdzNEQT09Cg=="
     },
     "windows-x86_64": {
-      "url": "https://github.com/Hcx-grass-star/niuma-macos/releases/download/v0.3.6/niuma-0.3.6-windows-x64-setup.exe",
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVScXN2Qm9wZG9oSURrWHI3Nm5raWhpWGdFL0lVeGZtUFNOeC9teHRMc2dwZlo5cWRtYXhXd1dqR1ZhbmpoWWtvaW1KYmM4T0c4VzB6R2w3QTZQcHZ1VXJFOWVtQ0ZOL3c0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0MjkwNDc5CWZpbGU6bml1bWEtMC4zLjYtd2luZG93cy14NjQtc2V0dXAuZXhlCXZlcnNpb246MC4zLjYKZHpUS0liV0dub012NjFhcWhSUEJydWJpT3NHeEVCL0VBdXJoSXBZTndUS3BPZW81Qk5BbERqZFpBbndyK29DVFVNZEVadmhqK0dlWWNkcDNSdzU0Q0E9PQo="
+      "url": "https://github.com/Hcx-grass-star/niuma-macos/releases/download/v0.4.2/niuma-0.4.2-windows-x64-setup.exe",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVScXN2Qm9wZG9oSUozSXI5R2xIcEJ6akxoT29DU3JiNC9rTzdIZ0M1SVg3YnE5MkNZWkZaaVg5R3F4NFRVaGdaUU5LWnpsaUxncXRtVVMxOGxXM2JTM2pjYjBFUEd1N0EwPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NTY0ODk5CWZpbGU654mb6ams5LiK54+tXzAuNC4yX3g2NC1zZXR1cC5leGUJdmVyc2lvbjowLjQuMgpjK0hzV2JXM2JoZDRzTVdKQVlPOFMvTkZJemxjWnJnWHYrU3ZuR2Q5TEUxRENRN3phMExZNTdRcnVtT09FeTFoZlN5eVUzSmR3Vk1BYlpoZXpxdzNEQT09Cg=="
     },
     "windows-x86_64-msi": {
-      "url": "https://github.com/Hcx-grass-star/niuma-macos/releases/download/v0.3.6/niuma-0.3.6-windows-x64.msi",
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVScXN2Qm9wZG9oSUhTd0xZb1E3dXZyQmNWbU5mbGpwUnZYRFgwb2dMZG5vd3VucTRDb3gvT2ZJa3lXM01KYWg2Tm9lZ0N4am1hbURmSWl5bmhZczAxVkN4NXhwd3ByQlFvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0MjkwNDc5CWZpbGU6bml1bWEtMC4zLjYtd2luZG93cy14NjQubXNpCXZlcnNpb246MC4zLjYKOHk0L1FoY1A3RFZxMzh1cUpSbEVnUERNNUtjZTU1eHkzRHkyc3kwbVNMNktVb3pGRVlWMjA2REZoOHBaNkxGM3NHSXczYWh2QnYzRS8wc0NhTS9nREE9PQo="
+      "url": "https://github.com/Hcx-grass-star/niuma-macos/releases/download/v0.4.2/niuma-0.4.2-windows-x64.msi",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVScXN2Qm9wZG9oSU1DNU9MbFJlcThRckliNmI0L1I0RGlqRTFzUXJ4c2VHTmNCYXpYR1M5eVdIY3kyTHpkdGd1WjgxdWJMeEorY3hEZ25Sclh3eVV0SnlBQkxtVFJzeUFvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NTY0ODk5CWZpbGU654mb6ams5LiK54+tXzAuNC4yX3g2NF96aC1DTi5tc2kJdmVyc2lvbjowLjQuMgowOVhIb1JWSjEzZDlucVdkRDBEYzFJdnpib2MrZUVnSnBoS005blJRMzUxWjB3S29YTUtGV04yR2NURDNBYVh4Z0dTQXkrK0xlaVlNZ3dtaCtFRE9EZz09Cg=="
     }
   }
 }
