@@ -1,0 +1,28 @@
+Building for production...
+[3 / 10] NiumaCore
+[4 / 11] NiumaCore
+/Users/huacaoxing/Code/Porject/niuma-macos/Package.swift: NiumaCore: ld: warning: search path '/Library/Developer/CommandLineTools/Developer/Library/Frameworks' not found
+[10 / 15] NiumaInstallation
+[11 / 16] NiumaInstallation
+/Users/huacaoxing/Code/Porject/niuma-macos/Package.swift: NiumaInstallation: ld: warning: search path '/Library/Developer/CommandLineTools/Developer/Library/Frameworks' not found
+[17 / 19] Niuma-product
+[18 / 20] Niuma-product
+/Users/huacaoxing/Code/Porject/niuma-macos/Package.swift: Niuma-product: ld: warning: search path '/Library/Developer/CommandLineTools/Developer/usr/lib' not found
+/Users/huacaoxing/Code/Porject/niuma-macos/Package.swift: Niuma-product: ld: warning: search path '/Library/Developer/CommandLineTools/Developer/Library/Frameworks' not found
+[20 / 20] Niuma-product
+[23 / 23] Niuma-product
+Build complete! (6.25秒)
+sandbox_extension_issue_file_to_process failed for /var/folders/33/dhlmtmrx3_gfs18qtv9drgsh0000gn/T//niuma-cheer-ui-check.k8Eyp2/MemoryProbe.app: 1 (Operation not permitted)
+PASS: 四页原型导航点击及图稿资源打包加载
+原生面板尺寸 cheer-wishes：(340.0, 347.0)
+原生面板尺寸 cheer-home：(340.0, 672.0)
+PASS: 原型首页横向愿望、双列卡片布局、四个入口跳转及隐私
+原生面板尺寸 cheer-report：(340.0, 382.0)
+PASS: 原生愿望新增、非法输入、文件回读、编辑达成、隐私及删除确认
+动画收尾：木槌角度=-0.41887902047863906，静止角度=-0.41887902047863906，浮字透明度=0.0
+原生面板尺寸 cheer-woodfish：(340.0, 601.0)
+PASS: 原生手动木鱼、自动模式、切页/午休/离开/关闭暂停
+协调器战报：15.625
+调薪保存累计：15.6250000000000000000000000000006，新工资：Optional(1000)
+调薪后累计：46.8750000000000000000000000000006
+PASS: 真实应用事件去重、战报、调薪生效区间及写入失败工资回滚

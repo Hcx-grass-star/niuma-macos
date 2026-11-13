@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 256 256" role="img" aria-label="牛马上班 · 放松小牛"><rect x="8" y="8" width="240" height="240" rx="54" fill="#e5eadb"/><g transform="rotate(-8 128 132)">
+<path d="M85 87C72 80 68 66 74 53C80 65 90 70 102 71Z" fill="#4d705b"/><path d="M171 87C184 80 188 66 182 53C176 65 166 70 154 71Z" fill="#4d705b"/>
+<path d="M86 104C69 86 48 87 47 104C47 118 66 126 84 120Z" fill="#4d705b"/><path d="M170 104C187 86 208 87 209 104C209 118 190 126 172 120Z" fill="#4d705b"/>
+<path d="M80 105C80 80 101 73 128 73C155 73 176 80 176 105V150C176 178 158 193 128 193C98 193 80 178 80 150Z" fill="#4d705b"/>
+<ellipse cx="128" cy="157" rx="44" ry="29" fill="#cbd7bf"/>
+<path d="M100 118Q108 125 116 118M140 118Q148 125 156 118" fill="none" stroke="#f8f6e9" stroke-width="4.5" stroke-linecap="round"/>
+<ellipse cx="113" cy="151" rx="3.5" ry="4" fill="#f8f6e9"/><ellipse cx="143" cy="151" rx="3.5" ry="4" fill="#f8f6e9"/>
+<path d="M117 168Q128 176 139 168" fill="none" stroke="#f8f6e9" stroke-width="4.5" stroke-linecap="round"/></g></svg>

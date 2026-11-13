@@ -1,0 +1,25 @@
+Building for production...
+[Planning deferred tasks]
+[11 / 30] NiumaCore
+[13 / 31] NiumaCore
+/Users/huacaoxing/Code/Porject/niuma-macos/Package.swift: NiumaCore: ld: warning: search path '/Library/Developer/CommandLineTools/Developer/Library/Frameworks' not found
+[20 / 32] NiumaInstallation
+[22 / 33] NiumaInstallation
+/Users/huacaoxing/Code/Porject/niuma-macos/Package.swift: NiumaInstallation: ld: warning: search path '/Library/Developer/CommandLineTools/Developer/Library/Frameworks' not found
+[29 / 34] Niuma-product
+[31 / 35] Niuma-product
+/Users/huacaoxing/Code/Porject/niuma-macos/Package.swift: Niuma-product: ld: warning: search path '/Library/Developer/CommandLineTools/Developer/usr/lib' not found
+/Users/huacaoxing/Code/Porject/niuma-macos/Package.swift: Niuma-product: ld: warning: search path '/Library/Developer/CommandLineTools/Developer/Library/Frameworks' not found
+[33 / 35] Niuma-product
+[34 / 35] Niuma-product
+Build complete! (5.72秒)
+PID: 70712
+测试配置：/var/folders/33/dhlmtmrx3_gfs18qtv9drgsh0000gn/T/niuma-ui-E8891053-2571-408C-AA75-4D2ACA06D257；更新偏好：niuma-ui-34FF45AB-FE92-4FDE-9AE4-4BB08F72601C
+sandbox_extension_issue_file_to_process failed for /var/folders/33/dhlmtmrx3_gfs18qtv9drgsh0000gn/T//niuma-ui-check.6QaBO1/MemoryProbe.app: 1 (Operation not permitted)
+before status action: active=false
+regression-idle: 15.45 MB; lifetime peak 15.45 MB
+event tick=3 NSWindowDidBecomeKeyNotification object=IncomePanel active=true panelVisible=true panelKey=true
+event tick=3 NSWindowDidResignKeyNotification object=IncomePanel active=false panelVisible=true panelKey=false
+event tick=3 NSWindowWillCloseNotification object=IncomePanel active=false panelVisible=true panelKey=false
+after status action: active=false visible=false key=false hides=false
+FAIL: 后台状态栏动作应展开面板并取得键盘焦点

@@ -1,0 +1,9 @@
+
+> niuma-cross-platform@0.4.0 test:core
+> node shared/income-engine.test.mjs && node shared/countdown-engine.test.mjs
+
+跨平台收入核心测试通过。
+PASS: 倒计时保存重载、周末、跨夜、到达、刷新策略和无效配置
+PASS: 数量上限、重复标识、关闭项、时间校正和夏令时故障隔离
+PASS: 下班倒计时跳过元旦长假并识别周日补班
+PASS: 到期删除、JSON重载、主事件回退、循环下班和关闭项保护

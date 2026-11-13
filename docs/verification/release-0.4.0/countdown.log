@@ -1,0 +1,5 @@
+Building for production...
+[1 / 6] NiumaInstallation
+Build complete! (0.20秒)
+sandbox_extension_issue_file_to_process failed for /var/folders/33/dhlmtmrx3_gfs18qtv9drgsh0000gn/T//niuma-ui-check.m6ftCp/MemoryProbe.app: 1 (Operation not permitted)
+PASS: 原生宽度、隐私、到期单次调度、编辑器保存及隐藏面板到期删除重载

@@ -1,6 +1,7 @@
 /**
  * 跨平台收入计算核心；只处理工资、排班和当前时间，不依赖窗口或系统托盘 API。
  */
+import { isScheduledDate, scheduleInfo } from './holiday-calendar.mjs';
 
 /** 将 HH:mm 转换为当天的分钟数。 */
 export function minutesFromTime(value) {
@@ -56,13 +57,29 @@ export function validateSettings(settings) {
 }
 
 /** 统计某个月中符合排班的日期数量，星期编号使用 JavaScript 的 0 到 6。 */
-export function workdaysInMonth(year, month, weekdays) {
+export function workdaysInMonth(year, month, weekdaysOrSettings) {
   const last = new Date(year, month + 1, 0).getDate();
-  let count = 0;
-  for (let day = 1; day <= last; day += 1) {
-    if (weekdays.includes(new Date(year, month, day).getDay())) count += 1;
+  const settings = Array.isArray(weekdaysOrSettings)
+    ? { weekdays: weekdaysOrSettings, chinaHolidayEnabled: false }
+    : weekdaysOrSettings;
+  return scheduledDays(new Date(year, month, 1), last, settings);
+}
+
+/** 统计连续日期中的有效班次；启用年度安排时按日期应用覆盖规则。 */
+function scheduledDays(firstDate, count, settings) {
+  if (settings.chinaHolidayEnabled !== true) {
+    let total = Math.floor(count / 7) * new Set(settings.weekdays).size;
+    for (let offset = 0; offset < count % 7; offset += 1) {
+      if (settings.weekdays.includes((firstDate.getDay() + offset) % 7)) total += 1;
+    }
+    return total;
   }
-  return count;
+  let total = 0;
+  for (let offset = 0; offset < count; offset += 1) {
+    const date = new Date(firstDate); date.setDate(date.getDate() + offset);
+    if (isScheduledDate(date, settings)) total += 1;
+  }
+  return total;
 }
 
 /** 根据班次开始日期计算一个完整班次的预估收入。 */
@@ -70,13 +87,13 @@ function dailyIncome(settings, date) {
   if (settings.mode === 'daily') return Number(settings.salary);
   const divisor = settings.divisor === 'fixed'
     ? Number(settings.fixedDays)
-    : workdaysInMonth(date.getFullYear(), date.getMonth(), settings.weekdays);
+    : workdaysInMonth(date.getFullYear(), date.getMonth(), settings);
   return Number(settings.salary) / divisor;
 }
 
 /** 将某个排班日期展开为实际班次和休息区间。 */
 function shiftForDate(date, schedule, settings) {
-  if (!settings.weekdays.includes(date.getDay())) return null;
+  if (!isScheduledDate(date, settings)) return null;
   const start = new Date(date);
   start.setMinutes(schedule.start);
   const end = new Date(date);
@@ -103,17 +120,33 @@ function paidMilliseconds(shift, lower, upper) {
   return Math.max(0, gross - unpaid);
 }
 
-/** 按当前配置回算本年一月一日至指定时刻的预估收入。 */
+/** 已完成班次按月汇总，仅展开跨年班和最近两天，回算本年预估收入。 */
 export function yearToDateIncome(settings, now = new Date()) {
+  return accruedIncome(settings, new Date(now.getFullYear(), 0, 1), now);
+}
+
+/** 按区间截断跨月班次；完整月份按排班汇总，只展开起始边界和最近两天。 */
+function accruedIncome(settings, periodStart, now) {
   validateSettings(settings);
   const schedule = normalizedSchedule(settings);
-  const yearStart = new Date(now.getFullYear(), 0, 1);
-  const firstDay = new Date(yearStart);
-  firstDay.setDate(firstDay.getDate() - 1);
-  const lastDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yearStart = periodStart;
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
   let total = 0;
-  for (let day = firstDay; day <= lastDay; day.setDate(day.getDate() + 1)) {
-    const shift = shiftForDate(new Date(day), schedule, settings);
+  for (let monthStart = new Date(periodStart); monthStart < yesterday;) {
+    const monthEnd = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 1);
+    const days = monthEnd <= yesterday
+      ? new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0).getDate()
+      : yesterday.getDate() - 1;
+    const count = scheduledDays(monthStart, days, settings);
+    if (count > 0) total += dailyIncome(settings, monthStart) * count;
+    monthStart = monthEnd;
+  }
+  const priorYearDay = new Date(yearStart);
+  priorYearDay.setDate(priorYearDay.getDate() - 1);
+  for (const timestamp of new Set([priorYearDay.getTime(), yesterday.getTime(), today.getTime()])) {
+    const shift = shiftForDate(new Date(timestamp), schedule, settings);
     if (!shift) continue;
     const lower = new Date(Math.max(shift.start.getTime(), yearStart.getTime()));
     const upper = new Date(Math.min(shift.end.getTime(), now.getTime()));
@@ -125,17 +158,39 @@ export function yearToDateIncome(settings, now = new Date()) {
   return total;
 }
 
+/** 计算任意时间区间内的计薪收入，供战报和愿望累计复用同一套排班规则。 */
+export function earnedBetween(settings, from, to) {
+  if (!(from instanceof Date) || !(to instanceof Date) || to <= from) return 0;
+  validateSettings(settings);
+  const schedule = normalizedSchedule(settings);
+  const firstDay = new Date(from.getFullYear(), from.getMonth(), from.getDate() - 1);
+  const lastDay = new Date(to.getFullYear(), to.getMonth(), to.getDate() + 1);
+  let total = 0;
+  for (const day = new Date(firstDay); day <= lastDay; day.setDate(day.getDate() + 1)) {
+    const shift = shiftForDate(new Date(day), schedule, settings);
+    if (!shift) continue;
+    const lower = new Date(Math.max(from.getTime(), shift.start.getTime()));
+    const upper = new Date(Math.min(to.getTime(), shift.end.getTime()));
+    const paid = paidMilliseconds(shift, lower, upper);
+    const duration = shift.end.getTime() - shift.start.getTime()
+      - shift.rests.reduce((sum, rest) => sum + rest.end.getTime() - rest.start.getTime(), 0);
+    if (paid > 0 && duration > 0) total += dailyIncome(settings, shift.date) * paid / duration;
+  }
+  return total;
+}
+
 /** 根据当前时间计算收入快照；不依赖计时器累计，便于两个系统保持一致。 */
 export function evaluateIncome(settings, now = new Date()) {
-  if (!settings) return { phase: 'unconfigured', amount: null, progress: 0 };
+  if (!settings) return { phase: 'unconfigured', amount: null, yearToDateAmount: null, monthToDateAmount: null, progress: 0 };
   validateSettings(settings);
   const schedule = normalizedSchedule(settings);
   const yearToDateAmount = yearToDateIncome(settings, now);
+  const monthToDateAmount = accruedIncome(settings, new Date(now.getFullYear(), now.getMonth(), 1), now);
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const candidates = [-1, 0].map((offset) => {
     const date = new Date(today);
     date.setDate(date.getDate() + offset);
-    if (!settings.weekdays.includes(date.getDay())) return null;
+    if (!isScheduledDate(date, settings)) return null;
     const start = new Date(date);
     start.setMinutes(schedule.start);
     const end = new Date(date);
@@ -145,11 +200,12 @@ export function evaluateIncome(settings, now = new Date()) {
   const active = candidates.find((shift) => now >= shift.start && now < shift.end);
   if (!active) {
     const todayShift = candidates.find((shift) => shift.date.getTime() === today.getTime());
-    if (!todayShift) return { phase: 'off', amount: null, yearToDateAmount, progress: 0 };
+    const scheduleReason = scheduleInfo(today, settings).label;
+    if (!todayShift) return { phase: 'off', amount: null, yearToDateAmount, monthToDateAmount, progress: 0, scheduleReason };
     const daily = dailyIncome(settings, todayShift.date);
     return now < todayShift.start
-      ? { phase: 'before', amount: 0, yearToDateAmount, progress: 0 }
-      : { phase: 'finished', amount: daily, yearToDateAmount, progress: 1 };
+      ? { phase: 'before', amount: 0, yearToDateAmount, monthToDateAmount, progress: 0, scheduleReason }
+      : { phase: 'finished', amount: daily, yearToDateAmount, monthToDateAmount, progress: 1, scheduleReason };
   }
 
   const elapsedMinutes = Math.max(0, (now - active.start) / 60000);
@@ -169,7 +225,37 @@ export function evaluateIncome(settings, now = new Date()) {
       return now >= start && now < end;
     }) ? 'resting' : 'working',
     amount: daily * Math.max(0, Math.min(schedule.paidMinutes, paidElapsed)) / schedule.paidMinutes,
-    yearToDateAmount,
+    yearToDateAmount, monthToDateAmount,
     progress: Math.max(0, Math.min(1, paidElapsed / schedule.paidMinutes)),
+    scheduleReason: scheduleInfo(active.date, settings).label,
   };
+}
+
+
+/** 兼容旧托盘开关，缺少新字段时保留此前的当前收入展示选择。 */
+export function menuBarContent(settings) {
+  return settings?.trayContent ?? (settings?.trayIncome === true ? 'current' : 'icon');
+}
+
+/** 从同一快照选择托盘金额；隐藏金额优先于内容选择，休息日仍可显示本月累计。 */
+export function menuBarPresentation(settings, snapshot) {
+  const content = menuBarContent(settings);
+  const label = content === 'month' ? '本月预估已赚' : '当前班次已赚';
+  const amount = settings?.hidden === true || content === 'icon' ? null : content === 'month' ? snapshot.monthToDateAmount : snapshot.amount;
+  return { content, label, amount: amount ?? null };
+}
+
+/** 有界枚举后续排班边界，供非计薪状态停止秒级轮询。 */
+export function nextIncomeBoundary(settings, now = new Date()) {
+  if (!settings) return null;
+  const schedule = normalizedSchedule(settings);
+  const candidates = [new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime()];
+  for (let offset = -1; offset <= 7; offset += 1) {
+    const day = new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset);
+    if (!isScheduledDate(day, settings)) continue;
+    for (const minute of [schedule.start, schedule.end, ...schedule.rests.flatMap(r => [r.start, r.end])]) {
+      const point = new Date(day); point.setMinutes(minute); candidates.push(point.getTime());
+    }
+  }
+  return Math.min(...candidates.filter(t => t > now.getTime()));
 }

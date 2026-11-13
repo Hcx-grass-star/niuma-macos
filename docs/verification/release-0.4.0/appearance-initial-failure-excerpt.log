@@ -1,0 +1,8 @@
+本次最初外观测试执行输出的关键行转录；完整后续通过日志见 appearance.log。
+event tick=4 NSWindowDidResignKeyNotification object=NSWindow active=false panelVisible=false panelKey=false front=com.huawei.fusionaccess frontPID=50102 mouseAge=27.114136333 keyAge=49.614136625
+event tick=4 NSApplicationDidResignActiveNotification object=NSApplication active=false panelVisible=false panelKey=false front=com.huawei.fusionaccess frontPID=50102 mouseAge=27.116458541 keyAge=49.616458583
+表单动作：保存并返回，enabled=true，key=false
+保存动作后：visible=false，表单错误=
+event tick=5 NSWindowDidBecomeKeyNotification object=IncomePanel active=true panelVisible=true panelKey=true front=com.huawei.fusionaccess frontPID=50102 mouseAge=28.206704791 keyAge=50.706704875
+event tick=5 NSWindowDidResignKeyNotification object=IncomePanel active=false panelVisible=true panelKey=false front=com.huawei.fusionaccess frontPID=50102 mouseAge=28.309407708 keyAge=50.80940775
+FAIL: 保存外观后应返回收入面板并取得焦点

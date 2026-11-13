@@ -1,0 +1,12 @@
+{
+  "bundle": {
+    "icon": ["../Resources/AppIcon.icns"],
+    "resources": {
+      "../build/NiumaInstaller": "NiumaInstaller"
+    },
+    "macOS": {
+      "infoPlist": "Info.plist",
+      "minimumSystemVersion": "13.0"
+    }
+  }
+}

@@ -1,0 +1,75 @@
+Building for production...
+[Planning deferred tasks]
+[15 / 52] NiumaCore
+[19 / 71] NiumaCore
+[23 / 71]
+[29 / 71]
+[30 / 71]
+[34 / 71]
+[35 / 71]
+[37 / 71]
+[39 / 71]
+[40 / 71] NiumaCore
+/Users/huacaoxing/Code/Porject/niuma-macos/Package.swift: NiumaCore: ld: warning: search path '/Library/Developer/CommandLineTools/Developer/Library/Frameworks' not found
+/Users/huacaoxing/Code/Porject/niuma-macos/Package.swift: NiumaCore: ld: warning: search path '/Library/Developer/CommandLineTools/Developer/Library/Frameworks' not found
+[49 / 72] NiumaInstallation
+[60 / 97]
+[61 / 97]
+[64 / 97]
+[68 / 97]
+[71 / 97]
+[73 / 97]
+[73 / 97] NiumaInstallation
+[77 / 97]
+[78 / 97]
+[79 / 97]
+[80 / 97] NiumaInstallation
+/Users/huacaoxing/Code/Porject/niuma-macos/Package.swift: NiumaInstallation: ld: warning: search path '/Library/Developer/CommandLineTools/Developer/Library/Frameworks' not found
+/Users/huacaoxing/Code/Porject/niuma-macos/Package.swift: NiumaInstallation: ld: warning: search path '/Library/Developer/CommandLineTools/Developer/Library/Frameworks' not found
+[89 / 98] Niuma-product
+[93 / 100] Niuma-product
+[95 / 100] Niuma-product
+/Users/huacaoxing/Code/Porject/niuma-macos/Package.swift: Niuma-product: ld: warning: search path '/Library/Developer/CommandLineTools/Developer/usr/lib' not found
+/Users/huacaoxing/Code/Porject/niuma-macos/Package.swift: Niuma-product: ld: warning: search path '/Library/Developer/CommandLineTools/Developer/Library/Frameworks' not found
+/Users/huacaoxing/Code/Porject/niuma-macos/Package.swift: Niuma-product: ld: warning: ignoring file '/Library/Developer/CommandLineTools/usr/lib/swift/macosx/libswiftCompatibilityPacks.a': fat file missing arch 'x86_64', file has 'arm64,arm64e'
+/Users/huacaoxing/Code/Porject/niuma-macos/Package.swift: Niuma-product: ld: warning: ignoring file '/Library/Developer/CommandLineTools/usr/lib/swift/macosx/libswiftCompatibilityPacks.a': fat file missing arch 'x86_64', file has 'arm64,arm64e'
+[97 / 100] Niuma-product
+/Users/huacaoxing/Code/Porject/niuma-macos/Package.swift: Niuma-product: ld: warning: search path '/Library/Developer/CommandLineTools/Developer/usr/lib' not found
+/Users/huacaoxing/Code/Porject/niuma-macos/Package.swift: Niuma-product: ld: warning: search path '/Library/Developer/CommandLineTools/Developer/Library/Frameworks' not found
+[99 / 100] Niuma-product
+Build complete! (21.24秒)
+Building for production...
+[Planning deferred tasks]
+[4 / 9] NiumaInstaller-product
+[6 / 51] NiumaInstaller-product
+[8 / 51] NiumaInstaller-product
+/Users/huacaoxing/Code/Porject/niuma-macos/Package.swift: NiumaInstaller-product: ld: warning: search path '/Library/Developer/CommandLineTools/Developer/usr/lib' not found
+/Users/huacaoxing/Code/Porject/niuma-macos/Package.swift: NiumaInstaller-product: ld: warning: search path '/Library/Developer/CommandLineTools/Developer/Library/Frameworks' not found
+[8 / 52]
+[14 / 52]
+[15 / 52]
+[21 / 52]
+[22 / 52]
+[25 / 52]
+[27 / 52]
+[37 / 52]
+[38 / 52]
+[42 / 52]
+[46 / 52]
+[47 / 52]
+[48 / 52] NiumaInstaller-product
+/Users/huacaoxing/Code/Porject/niuma-macos/Package.swift: NiumaInstaller-product: ld: warning: search path '/Library/Developer/CommandLineTools/Developer/usr/lib' not found
+/Users/huacaoxing/Code/Porject/niuma-macos/Package.swift: NiumaInstaller-product: ld: warning: search path '/Library/Developer/CommandLineTools/Developer/Library/Frameworks' not found
+/Users/huacaoxing/Code/Porject/niuma-macos/Package.swift: NiumaInstaller-product: ld: warning: ignoring file '/Library/Developer/CommandLineTools/usr/lib/swift/macosx/libswiftCompatibilityPacks.a': fat file missing arch 'x86_64', file has 'arm64,arm64e'
+/Users/huacaoxing/Code/Porject/niuma-macos/Package.swift: NiumaInstaller-product: ld: warning: ignoring file '/Library/Developer/CommandLineTools/usr/lib/swift/macosx/libswiftCompatibilityPacks.a': fat file missing arch 'x86_64', file has 'arm64,arm64e'
+[50 / 52] NiumaInstaller-product
+[55 / 55] NiumaInstaller-product
+Build complete! (14.99秒)
+/Users/huacaoxing/Code/Porject/niuma-macos/build/牛马上班.app/Contents/Frameworks/Sparkle.framework/Versions/B/XPCServices/Installer.xpc: replacing existing signature
+/Users/huacaoxing/Code/Porject/niuma-macos/build/牛马上班.app/Contents/Frameworks/Sparkle.framework/Versions/B/XPCServices/Downloader.xpc: replacing existing signature
+/Users/huacaoxing/Code/Porject/niuma-macos/build/牛马上班.app/Contents/Frameworks/Sparkle.framework/Versions/B/Autoupdate: replacing existing signature
+/Users/huacaoxing/Code/Porject/niuma-macos/build/牛马上班.app/Contents/Frameworks/Sparkle.framework/Versions/B/Updater.app: replacing existing signature
+/Users/huacaoxing/Code/Porject/niuma-macos/build/牛马上班.app/Contents/Frameworks/Sparkle.framework: replacing existing signature
+/Users/huacaoxing/Code/Porject/niuma-macos/build/牛马上班.app/Contents/Helpers/NiumaInstaller: replacing existing signature
+/Users/huacaoxing/Code/Porject/niuma-macos/build/牛马上班.app: replacing existing signature
+已构建：/Users/huacaoxing/Code/Porject/niuma-macos/build/牛马上班.app（x86_64 arm64）

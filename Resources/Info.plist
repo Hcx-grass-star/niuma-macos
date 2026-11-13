@@ -2,19 +2,29 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>CFBundleIdentifier</key><string>com.hcxgrassstar.niuma</string>
+    <key>CFBundleIdentifier</key><string>com.hcxgrassstar.niuma.development</string>
     <key>CFBundleExecutable</key><string>Niuma</string>
-    <key>CFBundleName</key><string>牛马上班</string>
-    <key>CFBundleDisplayName</key><string>牛马上班</string>
+    <key>CFBundleName</key><string>牛马上班（开发版）</string>
+    <key>CFBundleDisplayName</key><string>牛马上班（开发版）</string>
+    <!-- production / development / test：正式打包脚本覆盖为 production。 -->
+    <key>NiumaBuildChannel</key><string>development</string>
     <!-- 系统设置、Finder 与其他应用使用同一份多尺寸应用图标。 -->
     <key>CFBundleIconFile</key><string>AppIcon.icns</string>
     <key>CFBundlePackageType</key><string>APPL</string>
-    <key>CFBundleShortVersionString</key><string>0.1.0</string>
-    <key>CFBundleVersion</key><string>1</string>
+    <key>CFBundleShortVersionString</key><string>0.4.2</string>
+    <key>CFBundleVersion</key><string>13</string>
     <key>LSMinimumSystemVersion</key><string>13.0</string>
     <key>LSUIElement</key><true/>
-    <key>LSMultipleInstancesProhibited</key><true/>
+    <key>LSMultipleInstancesProhibited</key><false/>
     <key>NSHighResolutionCapable</key><true/>
     <key>NiumaSourceHash</key><string>local</string>
+    <!-- 正式分发包启用归位；普通本机构建保留在开发目录。 -->
+    <key>NiumaInstallOnLaunch</key><false/>
+    <!-- Sparkle 只响应现有更新入口，自动检查仍由统一的24小时策略负责。 -->
+    <key>SUFeedURL</key><string>https://hcx-grass-star.github.io/niuma-macos/appcast.xml</string>
+    <key>SUPublicEDKey</key><string>2e9jldZahlqAh5l/7mcD3NU/PckjwcrhQ05jziflFa4=</string>
+    <key>SUEnableAutomaticChecks</key><false/>
+    <key>SUEnableSystemProfiling</key><false/>
+    <key>SUVerifyUpdateBeforeExtraction</key><true/>
 </dict>
 </plist>

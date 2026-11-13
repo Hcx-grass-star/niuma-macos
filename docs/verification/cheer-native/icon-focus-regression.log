@@ -1,0 +1,29 @@
+Building for production...
+[3 / 10] NiumaCore
+[4 / 11] NiumaCore
+/Users/huacaoxing/Code/Porject/niuma-macos/Package.swift: NiumaCore: ld: warning: search path '/Library/Developer/CommandLineTools/Developer/Library/Frameworks' not found
+[10 / 15] NiumaInstallation
+[11 / 16] NiumaInstallation
+/Users/huacaoxing/Code/Porject/niuma-macos/Package.swift: NiumaInstallation: ld: warning: search path '/Library/Developer/CommandLineTools/Developer/Library/Frameworks' not found
+[17 / 19] Niuma-product
+[18 / 20] Niuma-product
+/Users/huacaoxing/Code/Porject/niuma-macos/Package.swift: Niuma-product: ld: warning: search path '/Library/Developer/CommandLineTools/Developer/usr/lib' not found
+/Users/huacaoxing/Code/Porject/niuma-macos/Package.swift: Niuma-product: ld: warning: search path '/Library/Developer/CommandLineTools/Developer/Library/Frameworks' not found
+[20 / 20] Niuma-product
+[23 / 23] Niuma-product
+Build complete! (6.03秒)
+Another instance of SwiftPM (PID: 39970) is already running using '/Users/huacaoxing/Code/Porject/niuma-macos/.build', waiting until that process has finished execution...PID: 40616
+测试配置：/var/folders/33/dhlmtmrx3_gfs18qtv9drgsh0000gn/T/niuma-ui-286B2389-41F3-40A2-903F-B8DB5A523A90；更新偏好：niuma-ui-1018C05A-3BE0-4BFD-88CC-95B311D3D769
+sandbox_extension_issue_file_to_process failed for /var/folders/33/dhlmtmrx3_gfs18qtv9drgsh0000gn/T//niuma-ui-check.jqYqK2/MemoryProbe.app: 1 (Operation not permitted)
+before status action: active=false
+regression-idle: 15.73 MB; lifetime peak 15.86 MB
+event tick=3 NSWindowDidBecomeKeyNotification object=IncomePanel active=true panelVisible=true panelKey=true
+after status action: active=true visible=true key=true hides=false
+regression-panel: 33.28 MB; lifetime peak 33.42 MB
+regression-panel: interval 2.00 s; CPU 0.1095%
+event tick=5 NSWindowWillCloseNotification object=IncomePanel active=true panelVisible=true panelKey=true
+event tick=5 NSWindowDidResignKeyNotification object=IncomePanel active=false panelVisible=false panelKey=false
+event tick=7 NSWindowDidBecomeKeyNotification object=IncomePanel active=true panelVisible=true panelKey=true
+event tick=7 NSWindowDidResignKeyNotification object=IncomePanel active=false panelVisible=true panelKey=false
+event tick=7 NSWindowWillCloseNotification object=IncomePanel active=false panelVisible=true panelKey=false
+FAIL: 收起后应能再次通过状态栏展开

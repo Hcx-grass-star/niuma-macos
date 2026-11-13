@@ -21,7 +21,7 @@ stage_dir="$dist_dir/stage"
 zip_path="$dist_dir/${app_name}-${version}-macOS-universal.zip"
 
 # 1. 构建并做基础校验（复用现有构建脚本，保证包内哈希与源码一致）。
-bash "$project_root/scripts/build-app.sh"
+NIUMA_DISTRIBUTION=1 bash "$project_root/scripts/build-app.sh"
 
 if [ -n "${DEVELOPER_ID_APP:-}" ] && [ -n "${NOTARY_PROFILE:-}" ]; then
     mode="notarized"
@@ -53,7 +53,8 @@ ${app_name} ${version}
   · Apple Silicon（M 系列）与 Intel 机型通用，无需 Rosetta 转译
 
 安装
-  1. 解压后，把「${app_name}.app」拖进「应用程序」文件夹。
+  1. 解压后直接打开「${app_name}.app」。新版会自动归位到“应用程序”，
+     退出对应旧版，确认新版启动后将旧包移到废纸篓；工资与排班保留。
   2. 双击打开。如果弹出「未打开“${app_name}”／Apple 无法验证……是否包含
      可能危害 Mac 安全或泄漏隐私的恶意软件」，这不是病毒报警，是系统
      对未公证应用的例行拦截。按下述任一种方式放行：
@@ -71,7 +72,8 @@ ${app_name} ${version}
        打开「终端」，粘贴执行下面一行，然后正常双击打开：
         xattr -dr com.apple.quarantine "/Applications/${app_name}.app"
 
-  3. 启动后会自动弹出设置窗口，填入自己的月薪与上下班时间即可。
+  3. 首次使用会弹出设置窗口；已有配置继续使用。以后在设置中点击
+     “安装更新”即可下载、验签、替换并重启；失败时可以选择手动下载。
 
 $([ "$mode" = "adhoc" ] && printf '%s\n' "为什么要多这一步
   这个版本是个人构建、未经 Apple 公证的独立应用，Apple 无法验证发布者身份，
@@ -80,8 +82,10 @@ $([ "$mode" = "adhoc" ] && printf '%s\n' "为什么要多这一步
 
 使用与卸载
   · 菜单栏图标即入口；快捷键 ⌘I 查看收入、⌘, 打开设置、⌘Q 退出。
-  · 配置只保存在一个文件：
+  · 工资与作息、倒计时、愿望与打气开关分别保存在本机文件：
       ~/Library/Application Support/com.hcxgrassstar.niuma/settings.json
+      ~/Library/Application Support/com.hcxgrassstar.niuma/countdowns.json
+      ~/Library/Application Support/com.hcxgrassstar.niuma/cheer.json
   · 卸载：先在设置里关闭「登录时启动」，退出应用，再删除 .app。
     若想彻底清除，请先点「清除设置并重置」，再删除 .app。
 EOF

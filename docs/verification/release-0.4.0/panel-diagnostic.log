@@ -1,0 +1,30 @@
+Building for production...
+[Planning deferred tasks]
+[3 / 11] NiumaCore
+[4 / 12] NiumaCore
+/Users/huacaoxing/Code/Porject/niuma-macos/Package.swift: NiumaCore: ld: warning: search path '/Library/Developer/CommandLineTools/Developer/Library/Frameworks' not found
+[10 / 15] NiumaInstallation
+[11 / 16] NiumaInstallation
+/Users/huacaoxing/Code/Porject/niuma-macos/Package.swift: NiumaInstallation: ld: warning: search path '/Library/Developer/CommandLineTools/Developer/Library/Frameworks' not found
+[17 / 19] Niuma-product
+[18 / 20] Niuma-product
+/Users/huacaoxing/Code/Porject/niuma-macos/Package.swift: Niuma-product: ld: warning: search path '/Library/Developer/CommandLineTools/Developer/usr/lib' not found
+/Users/huacaoxing/Code/Porject/niuma-macos/Package.swift: Niuma-product: ld: warning: search path '/Library/Developer/CommandLineTools/Developer/Library/Frameworks' not found
+[20 / 20] Niuma-product
+[23 / 23] Niuma-product
+Build complete! (6.44秒)
+PID: 72832
+测试配置：/var/folders/33/dhlmtmrx3_gfs18qtv9drgsh0000gn/T/niuma-ui-7D0408E9-8322-4326-86B4-67E7D777D226；更新偏好：niuma-ui-B516BE25-3FFB-4C97-8070-260FE8BCE978
+sandbox_extension_issue_file_to_process failed for /var/folders/33/dhlmtmrx3_gfs18qtv9drgsh0000gn/T//niuma-ui-check.8GklKm/MemoryProbe.app: 1 (Operation not permitted)
+before status action: active=false
+regression-idle: 15.45 MB; lifetime peak 15.45 MB
+event tick=3 NSWindowDidBecomeKeyNotification object=IncomePanel active=true panelVisible=true panelKey=true front=com.tencent.xinWeChat frontPID=1483
+after status action: active=true visible=true key=true hides=false
+regression-panel: 34.26 MB; lifetime peak 34.41 MB
+regression-panel: interval 2.00 s; CPU 0.1636%
+event tick=5 NSWindowWillCloseNotification object=IncomePanel active=true panelVisible=true panelKey=true front=com.tencent.xinWeChat frontPID=1483
+event tick=5 NSWindowDidResignKeyNotification object=IncomePanel active=false panelVisible=false panelKey=false front=com.tencent.xinWeChat frontPID=1483
+event tick=7 NSWindowDidBecomeKeyNotification object=IncomePanel active=true panelVisible=true panelKey=true front=com.tencent.xinWeChat frontPID=1483
+event tick=8 NSWindowDidResignKeyNotification object=IncomePanel active=false panelVisible=true panelKey=false front=com.tencent.xinWeChat frontPID=1483
+event tick=8 NSWindowWillCloseNotification object=IncomePanel active=false panelVisible=true panelKey=false front=com.tencent.xinWeChat frontPID=1483
+FAIL: 收起后应能再次通过状态栏展开

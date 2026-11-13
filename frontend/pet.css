@@ -1,0 +1,75 @@
+:root { font-family: "Microsoft YaHei UI", "Segoe UI", sans-serif; color: #223c30; background: transparent; }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: transparent; }
+button { font: inherit; cursor: pointer; }
+button:focus-visible { outline: 2px solid #25845c; outline-offset: 2px; }
+.pet { position: relative; display: flex; flex-direction: column; align-items: center; width: 264px; height: 284px; padding: 10px 12px 6px; user-select: none; }
+.bubble { position: relative; width: 100%; flex-shrink: 0; padding: 10px 14px; border: 1px solid #d7e5d9; border-radius: 20px; background: #fcfff8; box-shadow: 0 4px 12px #173c251a; }
+.bubble::after { content: ""; position: absolute; bottom: -7px; left: 112px; width: 12px; height: 12px; transform: rotate(45deg); border-right: 1px solid #d7e5d9; border-bottom: 1px solid #d7e5d9; background: #fcfff8; }
+.bubble-header { display: flex; justify-content: space-between; align-items: center; height: 24px; }
+#pet-phase { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: #56715e; }
+#pet-phase::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: #99ab9b; }
+[data-phase="working"] #pet-phase::before { background: #329b66; }
+[data-phase="resting"] #pet-phase::before { background: #d69e42; }
+.actions { display: flex; gap: 2px; margin-left: auto; }
+.actions button { width: 26px; height: 24px; border: 0; border-radius: 7px; background: transparent; color: #6d8073; font-size: 16px; }
+.actions button:hover { background: #e5efdf; }
+.details { display: block; width: 100%; padding: 0; border: 0; background: transparent; text-align: left; color: inherit; }
+.caption { font-size: 10px; color: #6d8073; }
+.pet-metric { display: block; }
+.pet-value { display: block; overflow: hidden; text-overflow: ellipsis; font-size: 29px; font-variant-numeric: tabular-nums; line-height: 1.25; letter-spacing: -.5px; white-space: nowrap; }
+.multiple .pet-metric { display: flex; align-items: baseline; justify-content: space-between; gap: 4px; min-height: 23px; }
+.multiple .caption { flex-shrink: 0; }
+.multiple .pet-value { font-size: 16px; letter-spacing: 0; }
+#pet-clock { display: block; margin-top: 4px; font-size: 12px; font-variant-numeric: tabular-nums; color: #56715e; }
+#pet-custom-text { margin: 4px 0 0; font-size: 11px; line-height: 15px; overflow-wrap: anywhere; white-space: pre-wrap; }
+#pet-message { margin: 4px 0 0; font-size: 10px; line-height: 1.5; color: #70816f; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mascot { width: 142px; min-height: 40px; max-height: 154px; flex: 1; margin: 4px auto 0; cursor: grab; touch-action: none; }
+.mascot:active { cursor: grabbing; }
+.mascot svg { display: block; width: 100%; height: 100%; pointer-events: none; }
+.pet-sprite { width: 142px; height: 154px; flex: 0 0 154px; background-repeat: no-repeat; background-size: 1136px 1694px; pointer-events: none; }
+.ground { fill: #173c2520; }
+.cow { transform-origin: 80px 130px; animation: breathe 3s ease-in-out infinite; }
+.body, .head { fill: #f2e4c6; stroke: #4d5945; stroke-width: 3; }
+.horn { fill: #c7a472; stroke: #685b41; stroke-width: 2; stroke-linejoin: round; }
+.ear { fill: #d4ba93; stroke: #4d5945; stroke-width: 3; }
+.tail { fill: none; stroke: #4d5945; stroke-width: 5; stroke-linecap: round; }
+.hoof, .patch { fill: #6a7059; }
+.eyes { fill: #334333; transform-origin: 80px 62px; animation: blink 5s infinite; }
+.cheek { fill: #e4ab96; opacity: .6; }
+.muzzle { fill: #d6be95; }
+.nostril { fill: #796e53; }
+.smile { fill: none; stroke: #796e53; stroke-width: 2; stroke-linecap: round; }
+.leaf { fill: #629957; stroke: #406e3e; stroke-width: 2; }
+.collar { fill: none; stroke: #57865a; stroke-width: 5; }
+.bell { fill: #e6bc59; stroke: #9a7c38; stroke-width: 2; }
+.drag-hint { display: block; text-align: center; font-size: 9px; color: #48613f; text-shadow: 0 1px 3px #fff; }
+.only-settings { display: none; position: absolute; right: 54px; top: 75px; width: 26px; height: 26px; border: 1px solid #d7e5d9; border-radius: 50%; background: #fcfff8; color: #56715e; }
+.only-pet { justify-content: center; }
+.only-pet .mascot { flex: none; height: 154px; }
+.only-pet .drag-hint { display: none; }
+/* 纯宠物模式仍保留键盘入口，悬停或获得焦点时显示配置按钮。 */
+.only-pet .only-settings { display: block; opacity: 0; }
+.only-pet:hover .only-settings, .only-settings:focus-visible { opacity: 1; }
+.pet-preferences { position: fixed; inset: 10px 12px; padding: 12px; overflow-y: auto; border: 1px solid #d7e5d9; border-radius: 16px; background: #fcfff8; font-size: 11px; }
+.pet-preferences h1 { margin: 0 0 6px; font-size: 15px; }
+.pet-resource-import { margin-bottom: 10px; padding: 8px; border: 1px solid #d7e5d9; border-radius: 10px; }
+.pet-resource-import strong { display: block; font-size: 12px; }
+.pet-resource-import p { margin: 3px 0 6px; color: #70816f; font-size: 10px; line-height: 14px; }
+.pet-resource-import button { padding: 5px 8px; border: 1px solid #bdcfbc; border-radius: 6px; background: #edf4e9; }
+.pet-preferences fieldset { display: grid; grid-template-columns: 1fr 1fr; gap: 5px 4px; margin: 0 0 8px; padding: 4px 0 0; border: 0; }
+.pet-preferences legend { padding: 0; color: #70816f; }
+.pet-preferences fieldset label { display: flex; align-items: center; gap: 4px; }
+.pet-preferences input { margin: 0; accent-color: #57865a; }
+.pet-preferences textarea { display: block; width: 100%; margin-top: 5px; padding: 4px; resize: none; border: 1px solid #bdcfbc; border-radius: 6px; background: #fff; color: #223c30; font: inherit; line-height: 14px; }
+.preferences-note { margin: 4px 0; color: #70816f; font-size: 10px; line-height: 12px; }
+.preferences-actions { display: flex; justify-content: flex-end; gap: 6px; }
+.preferences-actions button { padding: 6px 14px; border: 1px solid #bdcfbc; border-radius: 6px; background: #edf4e9; }
+.preferences-actions button[type="submit"] { background: #356349; color: #fff; }
+#pet-preferences-error { color: #a32c35; }
+[data-phase="working"] .cow { animation-duration: 1.8s; }
+[data-phase="resting"] .eyes, [data-phase="off"] .eyes { transform: scaleY(.35); animation: none; }
+@keyframes breathe { 50% { transform: translateY(-3px) rotate(1deg); } }
+@keyframes blink { 0%, 43%, 47%, 100% { transform: scaleY(1); } 45% { transform: scaleY(.1); } }
+@media (prefers-reduced-motion: reduce) { .cow, .eyes { animation: none; } }

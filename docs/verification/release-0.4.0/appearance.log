@@ -1,0 +1,48 @@
+Building for production...
+[2 / 9]
+[3 / 10] NiumaCore
+[4 / 11] NiumaCore
+/Users/huacaoxing/Code/Porject/niuma-macos/Package.swift: NiumaCore: ld: warning: search path '/Library/Developer/CommandLineTools/Developer/Library/Frameworks' not found
+[10 / 15] NiumaInstallation
+[11 / 16] NiumaInstallation
+/Users/huacaoxing/Code/Porject/niuma-macos/Package.swift: NiumaInstallation: ld: warning: search path '/Library/Developer/CommandLineTools/Developer/Library/Frameworks' not found
+[17 / 19] Niuma-product
+[18 / 20] Niuma-product
+/Users/huacaoxing/Code/Porject/niuma-macos/Package.swift: Niuma-product: ld: warning: search path '/Library/Developer/CommandLineTools/Developer/usr/lib' not found
+/Users/huacaoxing/Code/Porject/niuma-macos/Package.swift: Niuma-product: ld: warning: search path '/Library/Developer/CommandLineTools/Developer/Library/Frameworks' not found
+[20 / 20] Niuma-product
+[22 / 23] Niuma-product
+Build complete! (7.12秒)
+PID: 79465
+测试配置：/var/folders/33/dhlmtmrx3_gfs18qtv9drgsh0000gn/T/niuma-ui-7B4FD92C-B5A1-4366-A0DE-77E99A69AED5；更新偏好：niuma-ui-CDFED428-A9D4-4425-9942-AABC7D531387
+sandbox_extension_issue_file_to_process failed for /var/folders/33/dhlmtmrx3_gfs18qtv9drgsh0000gn/T//niuma-ui-check.bFY9Yz/MemoryProbe.app: 1 (Operation not permitted)
+appearance-idle: 15.60 MB; lifetime peak 15.60 MB
+event tick=3 NSWindowDidBecomeKeyNotification object=NSWindow active=true panelVisible=false panelKey=false front=com.hcxgrassstar.niuma.ui-check frontPID=79465 mouseAge=8.372016 keyAge=18.872016125
+event tick=3 NSApplicationDidBecomeActiveNotification object=NSApplication active=true panelVisible=false panelKey=false front=com.hcxgrassstar.niuma.ui-check frontPID=79465 mouseAge=8.376728833 keyAge=18.876729041
+event tick=3 NSWindowWillCloseNotification object=TUINSWindow active=true panelVisible=false panelKey=false front=com.hcxgrassstar.niuma.ui-check frontPID=79465 mouseAge=8.442145416 keyAge=18.9421455
+event tick=3 NSWindowDidBecomeKeyNotification object=SPRoundedWindow active=true panelVisible=false panelKey=false front=com.hcxgrassstar.niuma.ui-check frontPID=79465 mouseAge=8.537304166 keyAge=19.037304208
+表单动作：保存并返回，enabled=true，key=true
+event tick=5 NSWindowWillCloseNotification object=NSWindow active=true panelVisible=false panelKey=false front=com.hcxgrassstar.niuma.ui-check frontPID=79465 mouseAge=10.205666958 keyAge=20.705667083
+event tick=5 NSWindowDidResignKeyNotification object=NSWindow active=true panelVisible=false panelKey=false front=com.hcxgrassstar.niuma.ui-check frontPID=79465 mouseAge=10.209414833 keyAge=20.709414875
+保存动作后：visible=false，表单错误=
+event tick=5 NSWindowDidBecomeKeyNotification object=IncomePanel active=true panelVisible=true panelKey=true front=com.hcxgrassstar.niuma.ui-check frontPID=79465 mouseAge=10.300974375 keyAge=20.800974458
+appearance-glass-panel: 42.65 MB; lifetime peak 43.19 MB
+appearance-glass-panel: interval 2.12 s; CPU 0.4346%
+event tick=5 NSWindowWillCloseNotification object=IncomePanel active=true panelVisible=true panelKey=true front=com.hcxgrassstar.niuma.ui-check frontPID=79465 mouseAge=10.311486625 keyAge=20.811486625
+event tick=5 NSWindowDidResignKeyNotification object=IncomePanel active=true panelVisible=false panelKey=false front=com.hcxgrassstar.niuma.ui-check frontPID=79465 mouseAge=10.314494125 keyAge=20.814494166
+appearance-after-glass: 39.96 MB; lifetime peak 43.19 MB
+appearance-after-glass: interval 3.87 s; CPU 0.0589%
+event tick=9 NSWindowDidBecomeKeyNotification object=NSWindow active=true panelVisible=false panelKey=false front=com.hcxgrassstar.niuma.ui-check frontPID=79465 mouseAge=14.247497125 keyAge=24.747497166
+表单动作：取消修改，enabled=true，key=true
+event tick=11 NSWindowWillCloseNotification object=NSWindow active=true panelVisible=false panelKey=false front=com.hcxgrassstar.niuma.ui-check frontPID=79465 mouseAge=16.188909375 keyAge=26.688909541
+event tick=11 NSWindowDidResignKeyNotification object=NSWindow active=true panelVisible=false panelKey=false front=com.hcxgrassstar.niuma.ui-check frontPID=79465 mouseAge=16.193610458 keyAge=26.693610625
+event tick=11 NSWindowDidBecomeKeyNotification object=NSWindow active=true panelVisible=false panelKey=false front=com.hcxgrassstar.niuma.ui-check frontPID=79465 mouseAge=16.246563666 keyAge=26.746563666
+表单动作：保存并返回，enabled=true，key=true
+event tick=13 NSWindowWillCloseNotification object=NSWindow active=true panelVisible=false panelKey=false front=com.hcxgrassstar.niuma.ui-check frontPID=79465 mouseAge=18.195627625 keyAge=28.695627708
+event tick=13 NSWindowDidResignKeyNotification object=NSWindow active=true panelVisible=false panelKey=false front=com.hcxgrassstar.niuma.ui-check frontPID=79465 mouseAge=18.201209916 keyAge=28.701210041
+event tick=13 NSWindowDidBecomeKeyNotification object=IncomePanel active=true panelVisible=true panelKey=true front=com.hcxgrassstar.niuma.ui-check frontPID=79465 mouseAge=18.26435875 keyAge=28.764358833
+appearance-normal-panel: 66.00 MB; lifetime peak 66.00 MB
+appearance-normal-panel: interval 4.13 s; CPU 0.3273%
+event tick=13 NSWindowWillCloseNotification object=IncomePanel active=true panelVisible=true panelKey=true front=com.hcxgrassstar.niuma.ui-check frontPID=79465 mouseAge=18.319110125 keyAge=28.819110166
+event tick=13 NSWindowDidResignKeyNotification object=IncomePanel active=true panelVisible=false panelKey=false front=com.hcxgrassstar.niuma.ui-check frontPID=79465 mouseAge=18.321653541 keyAge=28.821653541
+PASS: 外观控件保存与取消、重载、原生玻璃嵌入与释放、主题、染色及普通圆角回退

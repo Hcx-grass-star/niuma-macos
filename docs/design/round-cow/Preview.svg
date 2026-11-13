@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1440" height="960" viewBox="0 0 1440 960">
+<defs><symbol id="app-art" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="tile" x1="160" y1="60" x2="870" y2="1000" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F4EDE3"/><stop offset="1" stop-color="#DFD0BD"/>
+    </linearGradient>
+    <linearGradient id="cream" x1="400" y1="290" x2="620" y2="750" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFCF3"/><stop offset=".55" stop-color="#F9F2E1"/><stop offset="1" stop-color="#EBDDC1"/>
+    </linearGradient>
+    <linearGradient id="ear" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#F7EFDB"/><stop offset="1" stop-color="#D9C6A3"/>
+    </linearGradient>
+    <linearGradient id="horn" x1="0" y1="0" x2=".4" y2="1">
+      <stop stop-color="#D9BB8D"/><stop offset="1" stop-color="#AD8758"/>
+    </linearGradient>
+    <linearGradient id="cocoa" x1="315" y1="330" x2="467" y2="546" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#80624D"/><stop offset="1" stop-color="#5C4437"/>
+    </linearGradient>
+    <linearGradient id="muzzle" x1="480" y1="555" x2="540" y2="740" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#EAD3AE"/><stop offset="1" stop-color="#D5B58A"/>
+    </linearGradient>
+    <radialGradient id="light" cx=".3" cy=".14" r=".85">
+      <stop stop-color="#FFFFFF" stop-opacity=".46"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="shadow" x="-.3" y="-.3" width="1.6" height="1.7" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="23" stdDeviation="20" flood-color="#796047" flood-opacity=".18"/>
+    </filter>
+    <clipPath id="face-clip"><path d="M512 293C367 293 268 365 268 500V540C268 687 355 757 512 757C669 757 756 687 756 540V500C756 365 657 293 512 293Z"/></clipPath>
+  </defs>
+  <!-- 大面积留白和柔和明暗让轮廓在 Dock 缩略尺寸仍然清楚。 -->
+  <rect x="40" y="40" width="944" height="944" rx="216" fill="url(#tile)"/>
+  <rect x="41" y="41" width="942" height="942" rx="215" fill="url(#light)" stroke="#FFFFFF" stroke-opacity=".5" stroke-width="2"/>
+  <g filter="url(#shadow)">
+    <!-- 短角收在头顶，避免长尖角改变短圆脸的比例。 -->
+    <path d="M350 339C321 314 317 274 333 248C340 238 352 241 354 253C358 276 373 288 398 296L395 344Z" fill="url(#horn)"/>
+    <path d="M674 339C703 314 707 274 691 248C684 238 672 241 670 253C666 276 651 288 626 296L629 344Z" fill="url(#horn)"/>
+    <path d="M309 420C279 377 220 355 170 369C154 373 149 385 155 403C174 465 234 489 294 462Z" fill="url(#ear)"/>
+    <path d="M715 420C745 377 804 355 854 369C870 373 875 385 869 403C850 465 790 489 730 462Z" fill="url(#ear)"/>
+    <path d="M274 430C249 404 217 394 190 397C204 427 230 443 267 443Z" fill="#B99675" opacity=".6"/>
+    <path d="M750 430C775 404 807 394 834 397C820 427 794 443 757 443Z" fill="#B99675" opacity=".6"/>
+    <path d="M512 293C367 293 268 365 268 500V540C268 687 355 757 512 757C669 757 756 687 756 540V500C756 365 657 293 512 293Z" fill="url(#cream)"/>
+    <!-- 一块可可色奶牛斑保持角色辨识，避免堆叠装饰。 -->
+    <g clip-path="url(#face-clip)">
+      <path d="M290 327C334 295 406 292 441 321C472 347 445 382 460 414C480 458 452 504 416 522C370 546 309 529 285 485C263 445 259 372 290 327Z" fill="url(#cocoa)"/>
+    </g>
+    <path d="M479 318C485 302 499 293 512 293C508 311 518 324 536 331C513 340 494 335 479 318Z" fill="#FFFCF3"/>
+    <!-- 小眼睛和轻微上扬的嘴角保留自然、放松的表情。 -->
+    <ellipse cx="403" cy="488" rx="18" ry="23" fill="#2D261F"/>
+    <ellipse cx="621" cy="488" rx="18" ry="23" fill="#2D261F"/>
+    <ellipse cx="398" cy="480" rx="5" ry="6" fill="#FFFFFF" opacity=".9"/>
+    <ellipse cx="616" cy="480" rx="5" ry="6" fill="#FFFFFF" opacity=".9"/>
+    <path d="M512 553C409 553 341 582 341 639C341 701 408 731 512 731C616 731 683 701 683 639C683 582 615 553 512 553Z" fill="url(#muzzle)"/>
+    <path d="M384 595C414 576 454 570 486 571" fill="none" stroke="#FFF5DF" stroke-opacity=".48" stroke-width="8" stroke-linecap="round"/>
+    <ellipse cx="452" cy="630" rx="10" ry="13" transform="rotate(-18 452 630)" fill="#866749"/>
+    <ellipse cx="572" cy="630" rx="10" ry="13" transform="rotate(18 572 630)" fill="#866749"/>
+    <path d="M486 678Q512 696 538 678" fill="none" stroke="#806147" stroke-width="8" stroke-linecap="round"/>
+  </g>
+</symbol><symbol id="menu-art" viewBox="0 0 36 36">
+  <!-- 模板只包含黑色与透明；扩大五官镂空以适配 18 点显示。 -->
+  <g fill="none" stroke="#000" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 10C10.5 8.5 10.5 6.5 11.2 5.2M24 10C25.5 8.5 25.5 6.5 24.8 5.2"/>
+    <path d="M8.3 14C6.6 12.3 4.2 12 2.5 12.7C3 15.3 4.9 17 7.8 16.7M27.7 14C29.4 12.3 31.8 12 33.5 12.7C33 15.3 31.1 17 28.2 16.7"/>
+    <path d="M18 9.3C11.2 9.3 7.7 13 7.7 19.1C7.7 26.3 11.4 29.3 18 29.3C24.6 29.3 28.3 26.3 28.3 19.1C28.3 13 24.8 9.3 18 9.3Z"/>
+    <path d="M12.2 24.2C14.4 26.2 21.6 26.2 23.8 24.2" stroke-width="1.8"/>
+  </g>
+  <circle cx="13.3" cy="17.9" r="1.3"/><circle cx="22.7" cy="17.9" r="1.3"/>
+  <ellipse cx="15" cy="23" rx=".9" ry="1.1"/><ellipse cx="21" cy="23" rx=".9" ry="1.1"/>
+</symbol></defs>
+<rect width="1440" height="960" fill="#FAF8F4"/>
+<g font-family="PingFang SC, Helvetica Neue, sans-serif">
+<text x="88" y="84" font-size="14" letter-spacing="3" fill="#8A8175">NIUMA / ICON STUDY 02</text>
+<text x="88" y="148" font-size="42" font-weight="600" fill="#3D332A">奶油小牛</text>
+<text x="90" y="187" font-size="17" fill="#8A8175">短圆脸 · 小牛角 · 自然微笑</text>
+<use xlink:href="#app-art" x="64" y="232" width="600" height="600"/>
+<path d="M730 260V790" stroke="#E8E2D8"/>
+<text x="808" y="282" font-size="19" font-weight="500" fill="#4B4035">应用图标 / 缩略效果</text>
+<use xlink:href="#app-art" x="796" y="322" width="144" height="144"/>
+<use xlink:href="#app-art" x="1002" y="362" width="64" height="64"/>
+<use xlink:href="#app-art" x="1154" y="378" width="32" height="32"/>
+<text x="868" y="500" font-size="13" text-anchor="middle" fill="#94887B">144 px</text>
+<text x="1034" y="500" font-size="13" text-anchor="middle" fill="#94887B">64 px</text>
+<text x="1170" y="500" font-size="13" text-anchor="middle" fill="#94887B">32 px</text>
+<text x="808" y="591" font-size="19" font-weight="500" fill="#4B4035">菜单栏 / 单色模板</text>
+<rect x="808" y="620" width="500" height="62" rx="14" fill="#EEECE7"/>
+<use xlink:href="#menu-art" x="836" y="642" width="18" height="18"/>
+<text x="877" y="657" font-size="13" fill="#66615B">浅色背景</text>
+<text x="1278" y="657" text-anchor="end" font-size="13" fill="#66615B">09:41</text>
+<rect x="808" y="700" width="500" height="62" rx="14" fill="#302D2A"/>
+<svg x="836" y="722" width="18" height="18" viewBox="0 0 36 36">
+  <!-- 模板只包含黑色与透明；扩大五官镂空以适配 18 点显示。 -->
+  <g fill="none" stroke="#FFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 10C10.5 8.5 10.5 6.5 11.2 5.2M24 10C25.5 8.5 25.5 6.5 24.8 5.2"/>
+    <path d="M8.3 14C6.6 12.3 4.2 12 2.5 12.7C3 15.3 4.9 17 7.8 16.7M27.7 14C29.4 12.3 31.8 12 33.5 12.7C33 15.3 31.1 17 28.2 16.7"/>
+    <path d="M18 9.3C11.2 9.3 7.7 13 7.7 19.1C7.7 26.3 11.4 29.3 18 29.3C24.6 29.3 28.3 26.3 28.3 19.1C28.3 13 24.8 9.3 18 9.3Z"/>
+    <path d="M12.2 24.2C14.4 26.2 21.6 26.2 23.8 24.2" stroke-width="1.8"/>
+  </g>
+  <circle cx="13.3" cy="17.9" r="1.3"/><circle cx="22.7" cy="17.9" r="1.3"/>
+  <ellipse cx="15" cy="23" rx=".9" ry="1.1"/><ellipse cx="21" cy="23" rx=".9" ry="1.1"/>
+</svg>
+<text x="877" y="737" font-size="13" fill="#EEE9E1">深色背景</text>
+<text x="1278" y="737" text-anchor="end" font-size="13" fill="#EEE9E1">09:41</text>
+<text x="808" y="801" font-size="13" fill="#9B9084">18 pt 模拟显示 · 合成预览</text>
+<path d="M88 872H1352" stroke="#E8E2D8"/>
+<text x="88" y="913" font-size="13" fill="#9B9084">矢量设计稿 · 尚未替换应用资源</text>
+<text x="1352" y="913" font-size="13" text-anchor="end" fill="#9B9084">2026.11.12</text>
+</g></svg>

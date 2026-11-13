@@ -1,5 +1,11 @@
 # 牛马上班应用图标
 
+2026-11-12：当前图标采用用户确认的「奶油小牛」手绘矢量稿：短圆脸、小牛角、可可色斑纹、浅焦糖鼻口和米色底。源文件为 `Artwork/AppIcon.svg`，确认稿与组合预览保存在 `../docs/design/round-cow/`。`AppIcon.png`（1024×1024）与 `AppIcon.icns` 均由该源稿导出；面板使用 `../Sources/NiumaCore/Resources/AppIcon.png`（128×128）。菜单栏源稿为 `Artwork/MenuBarCow.svg`，导出透明黑色 PNG（72×72），沿用程序中的 18 点模板显示。木鱼仍使用 `Artwork/Woodfish.svg`。
+
+导出使用本机 Sharp / librsvg 渲染，保留真实透明通道；应用图先按两倍分辨率渲染再缩至 1024 像素，随后以 Lanczos 缩放生成标准及 Retina 尺寸，使用系统 `iconutil` 打包 ICNS。以下为旧版钱币图标的历史生成说明，不代表当前资源。
+
+## 旧版生成记录
+
 使用内置 `image_gen` 工具生成，透明背景；原始生成图通过系统 `sips` 缩放为 1024 × 1024 PNG，再使用 `iconutil` 打包为包含标准与 Retina 尺寸的 ICNS。以下保留最终生成提示词，便于后续调整图标。
 
 ```text
