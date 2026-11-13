@@ -18,7 +18,13 @@
     </header>
     <section id="home" class="panel" aria-live="polite">
       <div class="toolbar"><span class="phase-badge"><span id="status-dot" class="status-dot" aria-hidden="true"></span><span id="phase">尚未设置</span></span><button id="hide" class="icon" type="button" aria-label="隐藏金额" title="隐藏金额">◉</button></div>
-      <div class="income">
+      <nav id="cheer-navigation" class="cheer-navigation" aria-label="功能页面">
+        <button type="button" data-page="income" aria-selected="true">收入</button>
+        <button type="button" data-page="report" aria-selected="false">战报</button>
+        <button type="button" data-page="wishes" aria-selected="false">愿望</button>
+        <button type="button" data-page="wood" aria-selected="false">木鱼</button>
+      </nav>
+      <div id="income-page" class="income cheer-page">
         <section id="current-income-section" class="metric metric-primary" aria-label="当前班次收入">
           <div class="label">当前已赚</div>
           <div id="amount" class="amount">—</div>
@@ -33,6 +39,36 @@
           <div class="label year-basis">按当前工资和排班回算</div>
         </section>
       </div>
+      <section id="report-page" class="cheer-page cheer-content" hidden aria-label="战报">
+        <h2>最近战报</h2>
+        <p id="report-empty" class="cheer-note">开启战报后，离开屏幕满两分钟再回来，就能看到这段时间的预估变化。</p>
+        <article id="report-card" class="cheer-card" hidden><strong id="report-title">欢迎回来，辛苦了</strong><p id="report-detail"></p></article>
+        <label class="check cheer-option"><input id="reports-enabled" type="checkbox" /> 记录离开后的战报</label>
+        <label class="check cheer-option"><input id="notifications-enabled" type="checkbox" checked /> 返回时发送系统提醒</label>
+        <p id="report-status" class="cheer-note" role="status"></p>
+      </section>
+      <section id="wishes-page" class="cheer-page cheer-content" hidden aria-label="愿望">
+        <h2>给努力一个小目标</h2>
+        <p class="cheer-note">每个愿望都使用同一份新增预估收入，不代表资金分配或真实存款。</p>
+        <div id="wish-list" class="wish-list"></div>
+        <form id="wish-form" class="wish-form" hidden>
+          <input id="wish-id" type="hidden" />
+          <label>愿望名称<input id="wish-name" type="text" maxlength="20" required /></label>
+          <div class="row"><label>目标金额<input id="wish-target" type="number" min="0.01" max="99999999" step="0.01" required /></label><label>已有金额<input id="wish-seed" type="number" min="0" max="99999999" step="0.01" value="0" required /></label></div>
+          <div class="row"><button id="wish-save" class="save" type="submit">保存愿望</button><button id="wish-cancel" type="button">取消</button></div>
+          <p id="wish-error" class="error" role="alert"></p>
+        </form>
+        <button id="wish-add" class="cheer-action" type="button">添加愿望</button>
+      </section>
+      <section id="wood-page" class="cheer-page cheer-content" hidden aria-label="木鱼">
+        <h2>敲敲木鱼</h2>
+        <p class="cheer-note">点击木鱼或聚焦后按空格，功德只保留在本次应用会话。</p>
+        <button id="woodfish" class="woodfish" type="button" aria-label="敲木鱼"><span aria-hidden="true">◉</span></button>
+        <strong id="merit" class="merit">功德 0</strong>
+        <p id="wood-status" class="cheer-note">自动敲击默认关闭。</p>
+        <label class="check cheer-option"><input id="auto-wood" type="checkbox" /> 工作中自动敲击</label>
+        <label class="check cheer-option"><input id="wood-sound" type="checkbox" /> 开启短促音效</label>
+      </section>
       <p id="countdown-summary" class="countdown-summary" hidden></p>
       <p id="quote" class="quote">设置一下，看看时间值多少钱。</p>
       <div id="update-banner" class="update-banner" role="status" hidden><span id="update-title"></span><button id="banner-details" type="button">更新说明</button><button id="banner-download" type="button">前往下载</button></div>
@@ -56,6 +92,9 @@
         <label class="check"><input id="show-yearly-income" type="checkbox" checked /> 本年预估已赚</label>
       </fieldset>
       <label class="check"><input id="encouragement" type="checkbox" checked /> 显示鼓励文案</label>
+      <label class="check"><input id="work-reminders" type="checkbox" /> 提醒上班、休息和下班节点</label>
+      <label>面板外观<select id="appearance-mode"><option value="system">跟随系统</option><option value="light">浅色</option><option value="dark">深色</option></select></label>
+      <label>面板染色<input id="appearance-tint" type="text" maxlength="6" placeholder="可选，例如 2c8a5a" /></label>
       <label>菜单栏／托盘显示<select id="tray-content"><option value="icon">仅图标</option><option value="current">当前班次已赚</option><option value="month">本月预估已赚</option></select></label>
       <button id="configure-menu" type="button" class="menu-configure">倒计时与菜单栏宽度</button>
       <label class="check"><input id="autostart" type="checkbox" /> 登录后自动启动</label>
@@ -68,6 +107,7 @@
       </section>
       <p class="settings-note">保存后会重算本班、本月及本年预估收入，显示金额可能变化。</p>
       <p id="error" class="error" role="alert" hidden></p>
+      <button id="reset-settings" type="button" class="reset">清除设置并重置</button>
       <button class="save" type="submit">保存并返回</button>
     </form>
     <form id="countdown-settings" class="panel settings" hidden>

@@ -12,6 +12,7 @@ await copyFile(resolve(root, 'shared/holiday-data.mjs'), resolve(root, 'frontend
 await copyFile(resolve(root, 'shared/china-holidays.json'), resolve(root, 'Sources/NiumaCore/Resources/china-holidays.json'));
 await copyFile(resolve(root, 'shared/countdown-engine.mjs'), resolve(root, 'frontend/countdown-engine.mjs'));
 await copyFile(resolve(root, 'shared/income-engine.mjs'), resolve(root, 'frontend/income-engine.mjs'));
+await copyFile(resolve(root, 'shared/cheer-engine.mjs'), resolve(root, 'frontend/cheer-engine.mjs'));
 await copyFile(resolve(root, 'shared/holiday-calendar.mjs'), resolve(root, 'frontend/holiday-calendar.mjs'));
 await copyFile(resolve(root, 'shared/china-holidays.json'), resolve(root, 'frontend/china-holidays.json'));
 await copyFile(resolve(root, 'shared/update-check.mjs'), resolve(root, 'frontend/update-check.mjs'));

@@ -158,6 +158,27 @@ function accruedIncome(settings, periodStart, now) {
   return total;
 }
 
+/** 计算任意时间区间内的计薪收入，供战报和愿望累计复用同一套排班规则。 */
+export function earnedBetween(settings, from, to) {
+  if (!(from instanceof Date) || !(to instanceof Date) || to <= from) return 0;
+  validateSettings(settings);
+  const schedule = normalizedSchedule(settings);
+  const firstDay = new Date(from.getFullYear(), from.getMonth(), from.getDate() - 1);
+  const lastDay = new Date(to.getFullYear(), to.getMonth(), to.getDate() + 1);
+  let total = 0;
+  for (const day = new Date(firstDay); day <= lastDay; day.setDate(day.getDate() + 1)) {
+    const shift = shiftForDate(new Date(day), schedule, settings);
+    if (!shift) continue;
+    const lower = new Date(Math.max(from.getTime(), shift.start.getTime()));
+    const upper = new Date(Math.min(to.getTime(), shift.end.getTime()));
+    const paid = paidMilliseconds(shift, lower, upper);
+    const duration = shift.end.getTime() - shift.start.getTime()
+      - shift.rests.reduce((sum, rest) => sum + rest.end.getTime() - rest.start.getTime(), 0);
+    if (paid > 0 && duration > 0) total += dailyIncome(settings, shift.date) * paid / duration;
+  }
+  return total;
+}
+
 /** 根据当前时间计算收入快照；不依赖计时器累计，便于两个系统保持一致。 */
 export function evaluateIncome(settings, now = new Date()) {
   if (!settings) return { phase: 'unconfigured', amount: null, yearToDateAmount: null, monthToDateAmount: null, progress: 0 };

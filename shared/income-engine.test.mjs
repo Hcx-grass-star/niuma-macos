@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { evaluateIncome, normalizedSchedule, validateSettings, menuBarContent, menuBarPresentation } from './income-engine.mjs';
+import { evaluateIncome, earnedBetween, normalizedSchedule, validateSettings, menuBarContent, menuBarPresentation } from './income-engine.mjs';
 import { holidayDataStatus, scheduleInfo } from './holiday-calendar.mjs';
 
 /** 创建跨平台测试使用的默认工资设置。 */
@@ -87,6 +87,14 @@ function testMonthIncome() {
   assert.equal(evaluateIncome(null).monthToDateAmount, null);
 }
 
+/** 验证任意区间计薪会扣除午休，并支持跨班次边界。 */
+function testEarnedBetween() {
+  const config = settings({ mode: 'daily', salary: 800 });
+  assert.equal(earnedBetween(config, localDate(4, 9), localDate(4, 9, 15)), 25);
+  assert.equal(earnedBetween(config, localDate(4, 11, 50), localDate(4, 12, 10)), 16.666666666666668);
+  assert.equal(earnedBetween(config, localDate(4, 18), localDate(4, 19, 9)), 0);
+}
+
 /** 验证核心计算在 Tauri 前端和 macOS 迁移前保持可重复。 */
 function run() {
   assert.equal(evaluateIncome(settings(), localDate(4, 14)).monthToDateAmount, 2500);
@@ -105,6 +113,7 @@ function run() {
   testAnnualBoundaries();
   testChinaHolidaySchedule();
   testMonthIncome();
+  testEarnedBetween();
   console.log('跨平台收入核心测试通过。');
 }
 

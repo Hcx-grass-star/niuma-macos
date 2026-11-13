@@ -1,7 +1,7 @@
 {
   "name": "niuma-cross-platform",
   "private": true,
-  "version": "0.4.1",
+  "version": "0.4.2",
   "type": "module",
   "scripts": {
     "test:core": "node shared/income-engine.test.mjs && node shared/countdown-engine.test.mjs",

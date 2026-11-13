@@ -1,4 +1,6 @@
 :root { color-scheme: light dark; font-family: -apple-system, BlinkMacSystemFont, "Microsoft YaHei UI", "Microsoft YaHei", "Segoe UI", "PingFang SC", sans-serif; color: #17231d; background: #f2f6f3; }
+:root[data-appearance="light"] { color-scheme: light; }
+:root[data-appearance="dark"] { color-scheme: dark; }
 @media (prefers-color-scheme: dark) { :root { color: #edf3ef; background: #1b201d; } }
 * { box-sizing: border-box; }
 /* Tauri 窗口不可调整大小；锁定视口后把长内容交给设置面板滚动。 */
@@ -32,7 +34,7 @@ body { height: 100vh; margin: 0; min-width: 320px; overflow: hidden; }
 @media (prefers-color-scheme: dark) { .icon { border-color: #405248; background: #29352d; color: #c6d8cb; } .icon:hover, .icon:focus-visible { background: #304638; } }
 .income { display: flex; flex: 1; flex-direction: column; justify-content: center; padding: 18px 16px 20px; text-align: center; }
 .metric { padding: 18px 12px; border-radius: 12px; }
-.metric-primary { background: linear-gradient(145deg, #f1faf3, #f9fcfa); }
+.metric-primary { background: linear-gradient(145deg, color-mix(in srgb, var(--niuma-tint, #2c8a5a) 10%, #fff), #f9fcfa); }
 @media (prefers-color-scheme: dark) { .metric-primary { background: linear-gradient(145deg, #263b2d, #27332b); } }
 .label { color: #728279; font-size: 12px; line-height: 18px; }
 .amount { margin: 4px 0 2px; color: #17231d; font-size: 46px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -2px; line-height: 1.15; }
@@ -42,6 +44,34 @@ body { height: 100vh; margin: 0; min-width: 320px; overflow: hidden; }
 .year-amount { margin: 4px 0 2px; color: #27372e; font-size: 24px; font-weight: 500; font-variant-numeric: tabular-nums; letter-spacing: -.5px; line-height: 1.25; }
 @media (prefers-color-scheme: dark) { .year-total { border-color: #35453b; } .year-amount { color: #e0ece3; } }
 .year-basis { margin-top: 2px; font-size: 11px; }
+.cheer-navigation { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin: 0 16px 8px; padding: 3px; border-radius: 10px; background: #edf3ee; }
+.cheer-navigation button { padding: 7px 4px; border-radius: 8px; color: #718078; font-size: 11px; }
+.cheer-navigation button[aria-selected="true"] { background: #fff; color: #28664b; font-weight: 600; box-shadow: 0 1px 4px #214b321c; }
+@media (prefers-color-scheme: dark) { .cheer-navigation { background: #29352d; } .cheer-navigation button[aria-selected="true"] { background: #3a4d40; color: #c7e6cf; } }
+.cheer-content { flex: 1; min-height: 0; overflow-y: auto; padding: 16px 18px 18px; }
+.cheer-content h2 { margin: 8px 0 6px; font-size: 17px; }
+.cheer-note { margin: 0 0 14px; color: #718078; font-size: 11px; line-height: 1.6; }
+.cheer-card, .wish-card { margin: 10px 0; padding: 13px; border: 1px solid #dbe7de; border-radius: 12px; background: #f7fbf8; }
+.cheer-card p, .wish-card p { margin: 5px 0 0; color: #718078; font-size: 12px; }
+.cheer-option { display: block; margin: 10px 0 !important; }
+.cheer-action, .reset { margin-top: 10px; padding: 8px 12px; border: 1px solid #71807888; border-radius: 8px; }
+.wish-list { display: grid; gap: 8px; }
+.wish-card { position: relative; }
+.wish-card strong { display: block; padding-right: 64px; }
+.wish-card .wish-actions { position: absolute; top: 10px; right: 10px; display: flex; gap: 4px; }
+.wish-actions button { padding: 3px 5px; color: #718078; font-size: 11px; }
+.wish-progress { height: 6px; margin-top: 10px; border-radius: 4px; background: #dce8df; overflow: hidden; }
+.wish-progress span { display: block; height: 100%; border-radius: inherit; background: #2c8a5a; }
+.wish-form { margin-top: 12px; padding: 12px; border: 1px solid #dbe7de; border-radius: 12px; }
+.wish-form label { margin: 0 0 10px; }
+.wish-form .row { margin: 0 0 10px; }
+.wish-form .save { width: auto; margin: 0; }
+.woodfish { display: grid; width: 148px; height: 148px; margin: 30px auto 18px; place-items: center; border: 10px solid #a96135; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #d9965d, #8e4a2d); box-shadow: inset 0 0 0 9px #c87b45, 0 12px 22px #66301f33; color: #fff3dd; font-size: 54px; transition: transform .12s ease; }
+.woodfish:active, .woodfish.struck { transform: scale(.92); }
+.merit { display: block; text-align: center; font-size: 16px; }
+#wood-page .cheer-note, #wood-page .cheer-option { text-align: center; }
+.reset { display: block; margin: 12px 18px 0; color: #b33535; }
+@media (prefers-color-scheme: dark) { .cheer-card, .wish-card, .wish-form { border-color: #405248; background: #29352d; } .wish-progress { background: #405248; } }
 .settings-note { margin: 0 18px 12px; color: #718078; font-size: 11px; }
 .updates { margin: 18px; padding: 14px 0; border-top: 1px solid #dbe4dd; font-size: 12px; }
 .updates p { color: #718078; font-size: 11px; line-height: 1.6; }

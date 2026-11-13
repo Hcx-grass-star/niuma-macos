@@ -126,7 +126,7 @@ macOS 13/14 上使用 `if #available` 回退：无参 `NSApp.activate()` 与 `NS
 
 0.3.6 新增工作节奏提醒：原生 macOS 版可在设置中开启上班、非计薪休息和下班提醒，通知不包含工资金额；收入面板会显示距离上班、休息结束或下班的自然状态文案。验证记录见 [工作提醒验证](docs/verification/work-reminders.md)。
 
-## 上班打气（原生 macOS 0.4.0）
+## 上班打气（macOS 与 Windows/Tauri）
 
 收入面板增加「收入 / 战报 / 愿望 / 木鱼」四页，原倒计时、金额显示选择与设置入口保留。
 
@@ -136,7 +136,7 @@ macOS 13/14 上使用 `if #available` 回退：无参 `NSApp.activate()` 与 `NS
 
 新配置独立保存为工资目录中的 `cheer.json`，包含愿望、开关、累计检查点与对应计薪规则；不保存离开历史或逐秒流水。面板收起、应用退出、离开和用户保存时结算，无新增后台周期性写盘。损坏文件保留并禁止覆盖；系统时间、时区或无法解释的规则变化会跳过不确定区间并提示，已有进度保留。清除设置时一并移除本功能文件。
 
-本次仅接入原生 macOS；Tauri/Windows 尚未移植。详细规则见 [设计方案](docs/design/下一版-上班打气设计方案.md)，验证范围见 [原生打气功能验证](docs/verification/cheer-features.md)。使用本地锁定依赖验证：
+Windows/Tauri 已接入同等的战报、愿望、木鱼、隐私联动、工作提醒和主题染色能力；战报使用窗口/页面离开与返回作为可用的跨平台离开信号，Windows 原生锁屏、通知投递和安装包仍需 Windows 10/11 真机验收。液态玻璃仅保留在 macOS AppKit 版本，Windows 使用浅色、深色和染色外观。详细规则见 [设计方案](docs/design/下一版-上班打气设计方案.md)，Windows 对齐验证见 [Windows 功能对齐验证](docs/verification/windows-feature-parity.md)，原生范围见 [原生打气功能验证](docs/verification/cheer-features.md)。
 
 ```bash
 swift run --disable-automatic-resolution NiumaIntegrationTests
