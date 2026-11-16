@@ -1,7 +1,6 @@
 {
-  "version": "0.4.2",
-  "notes": "# 牛马上班 0.4.2\n\n本次版本将 macOS 已有的上班打气功能同步到 Windows/Tauri，并保留上一版本的奶油小牛图标和收入、倒计时、桌面宠物、更新能力。\n\n## 更新内容\n\n- Windows/Tauri 新增收入、战报、愿望、木鱼四页导航。\n- 新增战报、愿望累计、隐私遮罩、手动/自动木鱼和会话功德。\n- 新增工作节点提醒、浅色/深色主题、面板染色和设置重置。\n- 战报和愿望累计复用共享区间计薪核心，自动扣除非计薪休息。\n\n## 验证与范围\n\n- `npm run test:core` 通过。\n- `npm run test:updates` 通过，包含 18 组收入集成与更新检查。\n- 本地浏览器交互验证通过：工资保存、四页切换、愿望新增、金额隐藏、木鱼点击和外观保存。\n- Windows 10/11 真机上的 WebView2、托盘、通知、自动启动、NSIS/MSI 安装升级仍需平台验收。\n\n源码归档分支：`release/0.4.2`；发布标签：`v0.4.2`。\n",
-  "url": "https://github.com/Hcx-grass-star/niuma-macos/releases/tag/v0.4.2",
-  "macos": "https://github.com/Hcx-grass-star/niuma-macos/releases/download/v0.4.2/niuma-0.4.2-macOS-universal.zip",
-  "windows": "https://github.com/Hcx-grass-star/niuma-macos/releases/download/v0.4.2/niuma-0.4.2-windows-x64-setup.exe"
+  "version": "0.4.3",
+  "notes": "# 牛马上班 0.4.3\n\n本次版本继续对齐 Windows/Tauri 与 macOS 的收入面板视觉，复刻 macOS 版的窄窗口构图与透明玻璃布局。\n\n## 更新内容\n\n- 调整 Windows 前端窗口上下留白，使标题区、收入面板和底部操作区与 macOS 版保持同一构图。\n- 调整面板横向视觉边界，使收入卡片、导航和底部按钮与 macOS 版截图对齐。\n- 保留 Windows 透明玻璃、Mica/Acrylic、四页打气功能和金额隐私遮罩。\n\n## 验证与范围\n\n- `npm run test:core` 通过。\n- `bash scripts/test-cheer-ui.sh` 通过。\n- 浏览器 434×903 视口验证收入页、木鱼页、木鱼点击和金额隐藏通过。\n- 当前环境未执行 Windows 10/11 真机安装包构建和 Mica/Acrylic 真机验收。\n\n源码归档分支：`release/0.4.3`；发布标签：`v0.4.3`。\n",
+  "url": "https://github.com/Hcx-grass-star/niuma-macos/releases/tag/v0.4.3",
+  "macos": "https://github.com/Hcx-grass-star/niuma-macos/releases/download/v0.4.3/niuma-0.4.3-macOS-universal.zip"
 }
