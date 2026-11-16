@@ -10,7 +10,7 @@
 <body>
   <main class="app" aria-label="牛马上班">
     <header class="brand titlebar" data-tauri-drag-region>
-      <span class="sprout" aria-hidden="true" data-tauri-drag-region>✦</span><strong data-tauri-drag-region>牛马上班</strong><span class="platform" data-tauri-drag-region>跨平台版</span>
+      <span class="sprout" aria-hidden="true" data-tauri-drag-region>✦</span><strong data-tauri-drag-region>牛马上班</strong>
       <div class="window-controls" role="group" aria-label="窗口控制">
         <button id="window-minimize" class="window-control" type="button" aria-label="最小化" title="最小化">−</button>
         <button id="window-close" class="window-control window-close" type="button" aria-label="关闭到托盘" title="关闭到托盘">×</button>
@@ -61,13 +61,20 @@
         <button id="wish-add" class="cheer-action" type="button">添加愿望</button>
       </section>
       <section id="wood-page" class="cheer-page cheer-content" hidden aria-label="木鱼">
-        <h2>敲敲木鱼</h2>
-        <p class="cheer-note">点击木鱼或聚焦后按空格，功德只保留在本次应用会话。</p>
-        <button id="woodfish" class="woodfish" type="button" aria-label="敲木鱼"><span aria-hidden="true">◉</span></button>
-        <strong id="merit" class="merit">功德 0</strong>
-        <p id="wood-status" class="cheer-note">自动敲击默认关闭。</p>
-        <label class="check cheer-option"><input id="auto-wood" type="checkbox" /> 工作中自动敲击</label>
-        <label class="check cheer-option"><input id="wood-sound" type="checkbox" /> 开启短促音效</label>
+        <h2>功德 +1，班味 −1。</h2>
+        <p class="cheer-note">敲一下，给自己一点松弛感。</p>
+        <button id="woodfish" class="woodfish" type="button" aria-label="敲木鱼">
+          <span class="woodfish-scene" aria-hidden="true">
+            <img class="woodfish-body" src="./WoodfishBody.svg" alt="" />
+            <img class="woodfish-mallet" src="./WoodfishMallet.svg" alt="" />
+            <span class="woodfish-impact">功德 +1</span>
+          </span>
+        </button>
+        <div class="merit-summary"><span>本次功德</span><strong id="merit" class="merit">0</strong></div>
+        <p id="wood-status" class="cheer-note">点击或聚焦木鱼后按空格敲击</p>
+        <label class="check cheer-option"><input id="auto-wood" type="checkbox" /> 上班自动敲</label>
+        <label class="check cheer-option"><input id="wood-sound" type="checkbox" /> 木鱼音效（默认静音）</label>
+        <p class="cheer-note wood-footnote">功德只是一点趣味，不影响工资。</p>
       </section>
       <p id="countdown-summary" class="countdown-summary" hidden></p>
       <p id="quote" class="quote">设置一下，看看时间值多少钱。</p>

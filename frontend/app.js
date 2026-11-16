@@ -97,7 +97,7 @@ function renderCheer(snapshot) {
   }
   if (page === 'wishes') renderWishes();
   if (page === 'wood') {
-    $('merit').textContent = `功德 ${cheerState.merit}`;
+    $('merit').textContent = String(cheerState.merit);
     $('auto-wood').checked = cheerState.preferences.autoWood === true;
     $('wood-sound').checked = cheerState.preferences.sound === true;
     $('wood-status').textContent = shouldAutoWood(cheerState.preferences.autoWood, snapshot.phase, nativeVisible && page === 'wood', Boolean(cheerState.awayAt)) ? '自动敲击中 · 每 1.5 秒一下' : cheerState.preferences.autoWood ? '自动已暂停 · 工作中展开本页恢复' : '自动敲击默认关闭。';

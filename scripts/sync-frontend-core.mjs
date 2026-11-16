@@ -16,6 +16,8 @@ await copyFile(resolve(root, 'shared/cheer-engine.mjs'), resolve(root, 'frontend
 await copyFile(resolve(root, 'shared/holiday-calendar.mjs'), resolve(root, 'frontend/holiday-calendar.mjs'));
 await copyFile(resolve(root, 'shared/china-holidays.json'), resolve(root, 'frontend/china-holidays.json'));
 await copyFile(resolve(root, 'shared/update-check.mjs'), resolve(root, 'frontend/update-check.mjs'));
+await copyFile(resolve(root, 'Resources/Artwork/WoodfishBody.svg'), resolve(root, 'frontend/WoodfishBody.svg'));
+await copyFile(resolve(root, 'Resources/Artwork/WoodfishMallet.svg'), resolve(root, 'frontend/WoodfishMallet.svg'));
 /** 浏览器预览版本来自项目清单；Tauri 正式运行使用应用包的真实版本。 */
 const { version } = JSON.parse(await readFile(resolve(root, 'package.json'), 'utf8'));
 await writeFile(resolve(root, 'frontend/app-version.json'), JSON.stringify({ version }) + '\n', 'utf8');
